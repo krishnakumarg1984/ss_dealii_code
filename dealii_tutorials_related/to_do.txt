@@ -1,0 +1,6 @@
+Triangulation/Mesh Generation Techniques
+----------------------------------------
+step-49, 53, 54, 65
+Read manifold descriptions
+Use material_id wisely (different materials on the same domain)
+See Step-28 for material_id usage

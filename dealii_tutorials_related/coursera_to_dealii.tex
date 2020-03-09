@@ -1,0 +1,32 @@
+\documentclass[a4paper]{article}
+\usepackage{lmodern}
+
+\usepackage{mathtools}
+
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{multicol}
+
+\usepackage[margin=1cm]{geometry}
+
+\begin{document}
+\begin{tabular}{@{} l c c l @{}} \toprule
+    % Coursera Nomenclature & Coursera Symbol & Deal II \\
+    \multicolumn{2}{c}{Coursera} & \multicolumn{2}{c}{Deal II} \\
+    \cmidrule(r){1-2} \cmidrule(l){3-4}
+    Nomenclature & Symbol & Symbol & Nomenclature \\
+    \midrule
+    Weighting function & $w$ & $\varphi$ & Test function \\
+    Global finite-dimensional trial solution  & $u^h$ & $u_h$ & \emph{Same meaning} \\
+    Global degrees of freedom & $\vec{d}$ & $U$ & \emph{Same meaning} \\
+    Finite element basis (shape) functions & $N$ & $\varphi$ & Finite element shape functions  \\
+    Parent domain, \emph{bi-unit measure} & $[-1,1]^\text{dim}$ & $[0,1]^\text{dim}$ & Reference cell, \emph{unit measure}  \\
+    Element & $e$ & $K$ & Cell  \\
+    Element conductivity matrix & $\underline{K}$ & $A^k$ & \emph{No specific name}   \\
+    Gauss quadrature index & $l$ & $q$ & \emph{Same meaning}   \\
+    \bottomrule
+\end{tabular}
+
+\bigskip
+For a square mesh, the total number of vertices is $(2^r + 1)^2$, where $r$ is the number of global refinements of the mesh
+\end{document}
