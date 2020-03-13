@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" name="description" content="GPTIPS 2 pareto report" name="author" content="Dominic Searson"/>
+<title>GPTIPS pareto front report.</title>
+<script type="text/javascript" src="http://www.google.com/jsapi"></script>
+<script type="text/javascript">google.load('visualization', '1', {packages: ['table']});
+</script>
+<link href='http://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
+<style>
+h1, h2, h3 {
+color: #0073bd; margin-top: 20px; 
+}
+p.warn {
+color: #993300; 
+}
+.google-visualization-table-table .google-visualization-table-td-number {
+font-family: 'Open Sans','Helvetica Neue', Helvetica, Arial, sans-serif;text-align: left;
+}
+.google-visualization-table-td {
+padding-top: 6px;padding-bottom: 6px;font-size: 14px;
+}
+</style>
+<script type="text/javascript">
+function drawPerformanceTable() {
+var data = new google.visualization.DataTable();
+data.addColumn('number','Model ID');
+data.addColumn('number','Goodness of fit (R<sup>2</sup>)');
+data.addColumn('number','Model complexity');
+data.addColumn('string','Model');
+data.addRows(10);
+data.setCell(0,0, 1);
+data.setCell(0,1, 0.985);
+data.setCell(0,2, 43);
+data.setCell(0,3, '8311.0 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span> - 1.32e4 tanh(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">1/2</span>) - 2.0e4 tanh(sin(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>)) + 6644.0 tanh(tanh(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>)) + 1.16e4 cos(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) + 6000.0 tanh(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) + 1.16e4 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">1/2</span> - 1.13e4');
+data.setCell(1,0, 53);
+data.setCell(1,1, 0.985);
+data.setCell(1,2, 40);
+data.setCell(1,3, '1.28e4 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span> - 2966.0 tanh(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">1/2</span>) - 1.05e4 tanh(sin(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>)) + 1422.0 tanh(tanh(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>)) + 1.17e4 cos(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) + 790.0 tanh(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) - 1.11e4');
+data.setCell(2,0, 157);
+data.setCell(2,1, 0.889);
+data.setCell(2,2, 17);
+data.setCell(2,3, '6.75 - 2.76 cos(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) - 2.76 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">1/2</span> - 3.19 tanh(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">1/2</span>)');
+data.setCell(3,0, 175);
+data.setCell(3,1, 0.862);
+data.setCell(3,2, 6);
+data.setCell(3,3, '2.93 - 4.03 tanh(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">1/2</span>)');
+data.setCell(4,0, 227);
+data.setCell(4,1, 0.941);
+data.setCell(4,2, 18);
+data.setCell(4,3, '66.1 tanh(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">1/2</span>) + 38.6 tanh(sin(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>)) - 93.0 tanh(tanh(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>)) - 16.8');
+data.setCell(5,0, 240);
+data.setCell(5,1, 0.985);
+data.setCell(5,2, 30);
+data.setCell(5,3, '1.06e4 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span> - 1.5e4 tanh(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">1/2</span>) - 1.25e4 tanh(sin(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>)) + 2888.0 tanh(tanh(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>)) + 1.33e4 cos(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) + 1.33e4 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">1/2</span> - 1.3e4');
+data.setCell(6,0, 497);
+data.setCell(6,1, 0.946);
+data.setCell(6,2, 26);
+data.setCell(6,3, '81.2 tanh(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">1/2</span>) - 205.0 tanh(tanh(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>)) + 35.3 cos(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) + 106.0 tanh(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) + 35.3 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">1/2</span> - 65.7');
+data.setCell(7,0, 1404);
+data.setCell(7,1, 0.986);
+data.setCell(7,2, 71);
+data.setCell(7,3, '2.35e4 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">2</span> exp(-1.0 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) tanh(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) - 1600.0 cos(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">2</span>) - 1.16e4 tanh(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>)<span style="position:relative;bottom: 0.3em;font-size:0.7em">3</span> - 246.0 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>^x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span> - 1733.0 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">2</span> - 246.0 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">3</span> - 183.0 tanh(3.35 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">2</span>) + 1811.0');
+data.setCell(8,0, 1443);
+data.setCell(8,1, 0.886);
+data.setCell(8,2, 7);
+data.setCell(8,3, '6.27 tanh(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>)<span style="position:relative;bottom: 0.3em;font-size:0.7em">3</span> - 5.2 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span> + 2.4');
+data.setCell(9,0, 1482);
+data.setCell(9,1, 0.986);
+data.setCell(9,2, 65);
+data.setCell(9,3, '2.35e4 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">2</span> exp(-1.0 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) tanh(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) - 1600.0 cos(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">2</span>) - 1.16e4 tanh(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>)<span style="position:relative;bottom: 0.3em;font-size:0.7em">3</span> - 246.0 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>^x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span> - 1733.0 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">2</span> - 246.0 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">3</span> - 183.0 tanh(3.35 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">2</span>) + 1811.0');
+viz = new google.visualization.Table(document.getElementById('perf_table'));
+viz.draw(data,  {width: 1000, allowHtml: true});}
+google.setOnLoadCallback(drawPerformanceTable);
+ </script>
+</head>
+<body>
+<body style="font-family: 'Open Sans','Helvetica Neue', Helvetica, Arial, sans-serif; border: 0;">
+<div style="text-align: left; margin-bottom: 50px;margin-top: 50px;margin-left: 15px;"><h2>GPTIPS pareto front report</h2><p>13-Mar-2020 16:27:22</p>
+<p>Config file: gitt_diffcoeff_fit.m</p>
+<p>Number of models on front: 10</p><p>Total models: 3000</p><p style="margin-top: 30px;">This report shows the expressional complexity/performance characteristics (on training data) of symbolic models on the pareto front.</p><p>Numerical precision is reduced for display purposes.</p><p style="margin-bottom: 30px;">Click on column headers to sort models by expressional complexity and goodness of fit (R<sup>2</sup>).</p><div id="perf_table"></div>
+<p style="color:gray;text-align:center;margin-top: 50px;">GPTIPS - the symbolic data mining platform for MATLAB</p><p style="color:gray;text-align:center;">&#169; Dominic Searson 2009-2015</p></div>
+</body>
+</html>

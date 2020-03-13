@@ -1,0 +1,98 @@
+\documentclass[a4paper]{article}
+\usepackage{lmodern}
+
+\usepackage{mathtools}
+
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{multicol}
+
+\usepackage[margin=1cm]{geometry}
+\usepackage{diffcoeff}
+\diffdef { p }
+{
+    op-symbol = \partial ,
+    left-delim = \left .,
+    right-delim = \right | ,
+    subscr-nudge = 0 mu
+}
+
+\usepackage{pdflscape}
+
+\begin{document}
+
+\begin{landscape}
+    \large
+    \centering
+    \begin{minipage}{0.480\columnwidth}
+        \begin{alignat}{2}
+            \diffp{u}{t} - \triangle u & = f  &\quad& \text{ in } \Omega \\
+            u & = g  &\quad& \text{ on } \partial\Omega 
+        \end{alignat}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.480\columnwidth}
+        \begin{alignat}{2}
+            \diffp{u}{t} - \nabla \cdot \left(D\left(u\right) \nabla u\right) & = 0  &\quad& \text{ in } \Omega  \\
+            D(u) \diffp{u}{x}{0} = -\beta; & \quad   D(u) \diffp{u}{x}{1} = 0 
+        \end{alignat}
+    \end{minipage}
+
+    \bigskip
+    \noindent\rule{\columnwidth}{1pt}
+
+    \begin{minipage}{0.4800\columnwidth}
+        \begin{equation}
+            \frac{u^n - u^{n-1}}{k_n} - \triangle \left(\left(1-\theta\right)u^{n-1} + \theta u^n\right) \\ = \left(1-\theta\right)f\left(x,t_{n-1}\right) + \theta f\left(x,t_n\right)
+        \end{equation}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.4800\columnwidth}
+        \begin{alignat}{2}
+            \begin{multlined}
+                \frac{u^n - u^{n-1}}{k_n} - D\left(u^\ast\right) \left(\left(1-\theta\right)u^{n-1} + \theta\, u^n\right) = 0, \quad  \\
+                \qquad\qquad D\left(u^\ast\right) = f(u^{n-k}), \ k = 1,2,\dots m
+            \end{multlined} 
+        \end{alignat}
+    \end{minipage}
+
+    \bigskip
+    \noindent\rule{\columnwidth}{1pt}
+
+    \begin{flushleft}
+        \underline{Spatial Discretisation}
+
+        \medskip
+        $u^n(x) \approx u^n_h(x) \coloneqq \sum_j U^n_j \phi_j(x)$
+    \end{flushleft}
+
+    \begin{minipage}{0.480\columnwidth}
+        \begin{equation}
+            M\frac{U^n - U^{n-1}}{k_n} + A \left(\left(1-\theta\right)U^{n-1} + \theta\, U^n\right) =  \left( 1-\theta \right) F^{n-1} + \theta F^n 
+        \end{equation}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.4800\columnwidth}
+        \begin{equation}
+            M\frac{U^n - U^{n-1}}{k_n} + A D(u^*) \left(\left(1-\theta\right)U^{n-1} + \theta\, U^n\right) =  (w\cdot-\beta){\Huge\mid}_{x=0}
+        \end{equation} 
+    \end{minipage}
+
+    \bigskip
+    \noindent\rule{\columnwidth}{1pt}
+
+    \begin{minipage}{0.48\columnwidth}
+        \begin{equation}
+            \left(M + k_n \theta A\right) U^n = \left(M - k_n A \left(1-\theta\right)\right) U^{n-1} + k_n\left(\left( 1-\theta \right) F^{n-1} + \theta F^n\right)
+        \end{equation}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.51\columnwidth}
+        \begin{equation}
+            \left(M + k_n \theta D\left(u^\ast\right) A \right) U^n = \left(M - k_n D\left(u^\ast\right) A \left(1-\theta\right)\right) U^{n-1} + k_n(w\cdot-\beta){\Huge\mid}_{x=0}
+        \end{equation} 
+    \end{minipage}
+
+\end{landscape}
+
+\end{document}

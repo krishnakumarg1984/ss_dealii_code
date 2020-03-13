@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" name="description" content="GPTIPS 2 pareto report" name="author" content="Dominic Searson"/>
+<title>GPTIPS pareto front report.</title>
+<script type="text/javascript" src="http://www.google.com/jsapi"></script>
+<script type="text/javascript">google.load('visualization', '1', {packages: ['table']});
+</script>
+<link href='http://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
+<style>
+h1, h2, h3 {
+color: #0073bd; margin-top: 20px; 
+}
+p.warn {
+color: #993300; 
+}
+.google-visualization-table-table .google-visualization-table-td-number {
+font-family: 'Open Sans','Helvetica Neue', Helvetica, Arial, sans-serif;text-align: left;
+}
+.google-visualization-table-td {
+padding-top: 6px;padding-bottom: 6px;font-size: 14px;
+}
+</style>
+<script type="text/javascript">
+function drawPerformanceTable() {
+var data = new google.visualization.DataTable();
+data.addColumn('number','Model ID');
+data.addColumn('number','Goodness of fit (R<sup>2</sup>)');
+data.addColumn('number','Model complexity');
+data.addColumn('string','Model');
+data.addRows(12);
+data.setCell(0,0, 503);
+data.setCell(0,1, 0.984);
+data.setCell(0,2, 29);
+data.setCell(0,3, '2955.0 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>^x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span> - 6.32e4 exp(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) - 2.57e4 sin(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) - 9.27e4 exp(-1.0 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) + 6.93e4 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">2</span> + 2055.0 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">(49497/10000)</span> + 1.53e5');
+data.setCell(1,0, 506);
+data.setCell(1,1, 0.972);
+data.setCell(1,2, 19);
+data.setCell(1,3, '2.97 exp(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) - 1699.0 exp(-1.0 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) - 1255.0 sin(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) + 413.0 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>^x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span> - 78.7 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">(49497/10000)</span> + 1333.0');
+data.setCell(2,0, 549);
+data.setCell(2,1, 0.446);
+data.setCell(2,2, 5);
+data.setCell(2,3, '0.552 - 1.18 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">4.95</span>');
+data.setCell(3,0, 771);
+data.setCell(3,1, 0.984);
+data.setCell(3,2, 27);
+data.setCell(3,3, '2911.0 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>^x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span> - 9.45e4 exp(-1.0 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) - 5.82e4 exp(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) - 1.8e4 sin(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) - 1.46e4 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span> + 6.78e4 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">2</span> + 1888.0 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">(49497/10000)</span> + 1.5e5');
+data.setCell(4,0, 1103);
+data.setCell(4,1, 0.835);
+data.setCell(4,2, 8);
+data.setCell(4,3, '1.43 - 1.93 sin(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>)');
+data.setCell(5,0, 1105);
+data.setCell(5,1, 0.984);
+data.setCell(5,2, 23);
+data.setCell(5,3, '8.1e4 sin(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) - 1.38e5 exp(-1.0 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) - 4488.0 exp(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) - 2.11e5 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span> + 2877.0 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>^x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span> + 6.27e4 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">2</span> + 1.4e5');
+data.setCell(6,0, 1115);
+data.setCell(6,1, 0.931);
+data.setCell(6,2, 13);
+data.setCell(6,3, '27.5 exp(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) - 41.7 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span> - 29.5 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>^x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span> - 3.16');
+data.setCell(7,0, 1203);
+data.setCell(7,1, 0.984);
+data.setCell(7,2, 25);
+data.setCell(7,3, '8.09e4 sin(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) - 1.37e5 exp(-1.0 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) - 4477.0 exp(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) - 2.1e5 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span> + 2877.0 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>^x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span> + 6.26e4 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">2</span> + 1.39e5');
+data.setCell(8,0, 1235);
+data.setCell(8,1, 0.918);
+data.setCell(8,2, 11);
+data.setCell(8,3, '26.8 exp(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) - 25.2 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span> - 21.3 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">2</span> - 25.7');
+data.setCell(9,0, 1239);
+data.setCell(9,1, 0.96);
+data.setCell(9,2, 17);
+data.setCell(9,3, '1944.0 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span> - 566.0 exp(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) - 1322.0 sin(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) + 151.0 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">2</span> + 560.0');
+data.setCell(10,0, 1244);
+data.setCell(10,1, 0.973);
+data.setCell(10,2, 22);
+data.setCell(10,3, '520.0 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>^x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span> - 2399.0 exp(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) - 2200.0 sin(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) - 5166.0 exp(-1.0 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) + 2622.0 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span><span style="position:relative;bottom: 0.3em;font-size:0.7em">2</span> + 7100.0');
+data.setCell(11,0, 1305);
+data.setCell(11,1, 0.95);
+data.setCell(11,2, 16);
+data.setCell(11,3, '56.4 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span> + 196.0 exp(-1.0 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) + 53.7 exp(x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>) - 134.0 x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span>^x<span style="position:relative;top: 0.3em;font-size:0.7em">1</span> - 140.0');
+viz = new google.visualization.Table(document.getElementById('perf_table'));
+viz.draw(data,  {width: 1000, allowHtml: true});}
+google.setOnLoadCallback(drawPerformanceTable);
+ </script>
+</head>
+<body>
+<body style="font-family: 'Open Sans','Helvetica Neue', Helvetica, Arial, sans-serif; border: 0;">
+<div style="text-align: left; margin-bottom: 50px;margin-top: 50px;margin-left: 15px;"><h2>GPTIPS pareto front report</h2><p>13-Mar-2020 16:36:16</p>
+<p>Config file: gitt_diffcoeff_fit.m</p>
+<p>Number of models on front: 12</p><p>Total models: 1500</p><p style="margin-top: 30px;">This report shows the expressional complexity/performance characteristics (on training data) of symbolic models on the pareto front.</p><p>Numerical precision is reduced for display purposes.</p><p style="margin-bottom: 30px;">Click on column headers to sort models by expressional complexity and goodness of fit (R<sup>2</sup>).</p><div id="perf_table"></div>
+<p style="color:gray;text-align:center;margin-top: 50px;">GPTIPS - the symbolic data mining platform for MATLAB</p><p style="color:gray;text-align:center;">&#169; Dominic Searson 2009-2015</p></div>
+</body>
+</html>
