@@ -100,12 +100,13 @@ namespace SolidDiffusion
   }
 
 
+  // Constructor for the class DiffusionEquation
   template <int dim>
   DiffusionEquation<dim>::DiffusionEquation()
     : fe(1)
     , dof_handler(triangulation)
     , time(0.0)
-    , time_step(1. / 500)
+    , time_step(1.0) // 1 sec or 10 sec is okay as per MC
     , timestep_number(0)
     , theta(0.5)
   {}
@@ -231,17 +232,17 @@ namespace SolidDiffusion
   template <int dim>
   void DiffusionEquation<dim>::run()
   {
-    const unsigned int initial_global_refinement       = 4;
-    const unsigned int n_adaptive_pre_refinement_steps = 8;
+    const unsigned int initial_global_refinement       = 3;
+    const unsigned int n_adaptive_pre_refinement_steps = 6;
 
-    GridGenerator::hyper_cube(triangulation);
+    GridGenerator::hyper_cube(triangulation); // In 1D, a hypercube is a line
     triangulation.refine_global(initial_global_refinement);
 
     setup_system();
 
     unsigned int pre_refinement_step = 0;
 
-    Vector<double> tmp;
+    Vector<double> tmp; // for holding temporary RHS quantities
     // Vector<double> forcing_terms;
 
   start_time_iteration:
@@ -251,20 +252,22 @@ namespace SolidDiffusion
 
 
     VectorTools::interpolate(dof_handler,
-                             Functions::ZeroFunction<dim>(),
+                             // Functions::ZeroFunction<dim>(),
+                             Functions::ConstantFunction<dim>(0.5), // init x_Li
                              old_solution);
 
     solution = old_solution;
 
     output_results();
-    while (time <= 0.5)
+
+    while (time <= 10) // end time is hard-coded here for now
       {
         time += time_step;
         ++timestep_number;
         std::cout << "Time step " << timestep_number << " at t=" << time
                   << std::endl;
-        mass_matrix.vmult(system_rhs, old_solution);
-        laplace_matrix.vmult(tmp, old_solution);
+        mass_matrix.vmult(system_rhs, old_solution); // MU^(n-1) into system_rhs
+        laplace_matrix.vmult(tmp, old_solution);     // AU^(n-1) into tmp
         system_rhs.add(-(1 - theta) * time_step, tmp);
         // DiffusionCoefficient<dim> rhs_function;
         // rhs_function.set_time(time);
@@ -333,8 +336,8 @@ int main()
       using namespace dealii;
       using namespace SolidDiffusion;
 
-      DiffusionEquation<1> heat_equation_solver;
-      heat_equation_solver.run();
+      DiffusionEquation<1> diffusion_equation_solver;
+      diffusion_equation_solver.run();
     }
   catch (std::exception &exc)
     {
