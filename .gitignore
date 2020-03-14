@@ -1,4 +1,6 @@
 *tags
 *.spl
 *.pdf
-
+*.vtk
+*.vtu
+!compile_commands.json
