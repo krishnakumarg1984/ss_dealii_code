@@ -242,12 +242,12 @@ namespace SolidDiffusion
     unsigned int pre_refinement_step = 0;
 
     Vector<double> tmp;
-    Vector<double> forcing_terms;
+    // Vector<double> forcing_terms;
 
   start_time_iteration:
 
     tmp.reinit(solution.size());
-    forcing_terms.reinit(solution.size());
+    // forcing_terms.reinit(solution.size());
 
 
     VectorTools::interpolate(dof_handler,
@@ -266,31 +266,31 @@ namespace SolidDiffusion
         mass_matrix.vmult(system_rhs, old_solution);
         laplace_matrix.vmult(tmp, old_solution);
         system_rhs.add(-(1 - theta) * time_step, tmp);
-        DiffusionCoefficient<dim> rhs_function;
-        rhs_function.set_time(time);
-        VectorTools::create_right_hand_side(dof_handler,
-                                            QGauss<dim>(fe.degree + 1),
-                                            rhs_function,
-                                            tmp);
-        forcing_terms = tmp;
-        forcing_terms *= time_step * theta;
-        rhs_function.set_time(time - time_step);
-        VectorTools::create_right_hand_side(dof_handler,
-                                            QGauss<dim>(fe.degree + 1),
-                                            rhs_function,
-                                            tmp);
-        forcing_terms.add(time_step * (1 - theta), tmp);
-        system_rhs += forcing_terms;
+        // DiffusionCoefficient<dim> rhs_function;
+        // rhs_function.set_time(time);
+        // VectorTools::create_right_hand_side(dof_handler,
+        //                                     QGauss<dim>(fe.degree + 1),
+        //                                     // rhs_function,
+        //                                     tmp);
+        // forcing_terms = tmp;
+        // forcing_terms *= time_step * theta;
+        // rhs_function.set_time(time - time_step);
+        // VectorTools::create_right_hand_side(dof_handler,
+        //                                     QGauss<dim>(fe.degree + 1),
+        //                                     // rhs_function,
+        //                                     tmp);
+        // forcing_terms.add(time_step * (1 - theta), tmp);
+        // system_rhs += forcing_terms;
         system_matrix.copy_from(mass_matrix);
         system_matrix.add(theta * time_step, laplace_matrix);
         constraints.condense(system_matrix, system_rhs);
         {
-          BoundaryValues<dim> boundary_values_function;
-          boundary_values_function.set_time(time);
+          // BoundaryValues<dim> boundary_values_function;
+          // boundary_values_function.set_time(time);
           std::map<types::global_dof_index, double> boundary_values;
           VectorTools::interpolate_boundary_values(dof_handler,
                                                    0,
-                                                   boundary_values_function,
+                                                   // boundary_values_function,
                                                    boundary_values);
           MatrixTools::apply_boundary_values(boundary_values,
                                              system_matrix,
@@ -307,7 +307,7 @@ namespace SolidDiffusion
                           n_adaptive_pre_refinement_steps);
             ++pre_refinement_step;
             tmp.reinit(solution.size());
-            forcing_terms.reinit(solution.size());
+            // forcing_terms.reinit(solution.size());
             std::cout << std::endl;
             goto start_time_iteration;
           }
@@ -317,7 +317,7 @@ namespace SolidDiffusion
                         initial_global_refinement +
                           n_adaptive_pre_refinement_steps);
             tmp.reinit(solution.size());
-            forcing_terms.reinit(solution.size());
+            // forcing_terms.reinit(solution.size());
           }
 
         old_solution = solution;
