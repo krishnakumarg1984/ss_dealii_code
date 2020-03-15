@@ -65,6 +65,7 @@ namespace SolidDiffusion
 
   private:
     void setup_system();
+    void assemble_neumann_rhs();
     void solve_time_step();
     void output_results() const;
     void refine_mesh(const unsigned int min_grid_level,
@@ -74,7 +75,7 @@ namespace SolidDiffusion
     FE_Q<dim>          fe;
     DoFHandler<dim>    dof_handler;
 
-    AffineConstraints<double> constraints;
+    AffineConstraints<double> constraints; // hanging_node_constraints
 
     SparsityPattern      sparsity_pattern;
     SparseMatrix<double> mass_matrix;
@@ -84,6 +85,7 @@ namespace SolidDiffusion
     Vector<double> solution;
     Vector<double> old_solution;
     Vector<double> system_rhs;
+    Vector<double> system_rhs_neumannbc;
 
     double       time;
     double       time_step;
@@ -150,8 +152,63 @@ namespace SolidDiffusion
     solution.reinit(dof_handler.n_dofs());
     old_solution.reinit(dof_handler.n_dofs());
     system_rhs.reinit(dof_handler.n_dofs());
+    system_rhs_neumannbc.reinit(dof_handler.n_dofs());
   }
 
+  template <int dim>
+  void DiffusionEquation<dim>::assemble_neumann_rhs()
+  {
+    QGauss<dim - 1> face_quadrature_formula(fe.degree + 1);
+
+    const unsigned int n_face_q_points = face_quadrature_formula.size();
+
+    // const unsigned int dofs_per_cell = fe->dofs_per_cell;
+    const unsigned int dofs_per_cell = fe.dofs_per_cell;
+
+    Vector<double> cell_rhs(dofs_per_cell);
+
+    std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
+
+    FEFaceValues<dim> fe_face_values(fe,
+                                     face_quadrature_formula,
+                                     update_values | update_JxW_values);
+
+    for (const auto &cell : dof_handler.active_cell_iterators())
+      {
+        cell_rhs = 0.;
+
+        // Only in 9.2 and above
+        /*
+         * for (const auto &face : cell->face_iterators())
+         *   if (face->at_boundary() && (face->boundary_id() == 1))
+         *     {
+         *       fe_face_values.reinit(cell, face);
+         */
+
+        for (unsigned int face_number = 0;
+             face_number < GeometryInfo<dim>::faces_per_cell;
+             ++face_number)
+          if (cell->face(face_number)->at_boundary() &&
+              (cell->face(face_number)->boundary_id() == 1))
+            {
+              fe_face_values.reinit(cell, face_number);
+              for (unsigned int q_point = 0; q_point < n_face_q_points;
+                   ++q_point)
+                {
+                  double neumann_value = -0.1; // currently hard coded
+                  for (unsigned int i = 0; i < dofs_per_cell; ++i)
+                    cell_rhs(i) +=
+                      (neumann_value *                          // g(x_q)
+                       fe_face_values.shape_value(i, q_point) * // phi_i(x_q)
+                       fe_face_values.JxW(q_point));            // dx
+                }
+            }
+
+        cell->get_dof_indices(local_dof_indices);
+        for (unsigned int i = 0; i < dofs_per_cell; ++i)
+          system_rhs_neumannbc(local_dof_indices[i]) += cell_rhs(i);
+      }
+  } // namespace SolidDiffusion
 
   template <int dim>
   void DiffusionEquation<dim>::solve_time_step()
@@ -181,10 +238,13 @@ namespace SolidDiffusion
 
     data_out.build_patches();
 
-    const std::string filename =
-      "solution-" + Utilities::int_to_string(timestep_number, 3) + ".vtk";
+    const std::string filename = "solution_timestep_" +
+                                 Utilities::int_to_string(timestep_number, 3) +
+                                 ".vtu";
+                                 // ".gnuplot";
     std::ofstream output(filename);
-    data_out.write_vtk(output);
+    data_out.write_vtu(output);
+    // data_out.write_gnuplot(output);
   }
 
 
@@ -238,17 +298,35 @@ namespace SolidDiffusion
     GridGenerator::hyper_cube(triangulation); // In 1D, a hypercube is a line
     triangulation.refine_global(initial_global_refinement);
 
+    for (const auto &cell : triangulation.cell_iterators())
+      // In 9.1
+      for (unsigned int face_number = 0;
+           face_number < GeometryInfo<dim>::faces_per_cell;
+           ++face_number)
+        {
+          const auto center = cell->face(face_number)->center();
+          if (std::fabs(center(0)) < 1e-12)
+            cell->face(face_number)->set_boundary_id(1);
+        }
+
+    /* Only in 9.2 and above
+     *   for (const auto &face : cell->face_iterators())
+     *     {
+     *       const auto center = face->center();
+     *       if (std::fabs(center(0)) < 1e-12)
+     *         face->set_boundary_id(1);
+     *     }
+     */
+
     setup_system();
 
     unsigned int pre_refinement_step = 0;
 
     Vector<double> tmp; // for holding temporary RHS quantities
-    // Vector<double> forcing_terms;
 
   start_time_iteration:
 
     tmp.reinit(solution.size());
-    // forcing_terms.reinit(solution.size());
 
 
     VectorTools::interpolate(dof_handler,
@@ -264,44 +342,29 @@ namespace SolidDiffusion
       {
         time += time_step;
         ++timestep_number;
+
         std::cout << "Time step " << timestep_number << " at t=" << time
                   << std::endl;
+
         mass_matrix.vmult(system_rhs, old_solution); // MU^(n-1) into system_rhs
-        laplace_matrix.vmult(tmp, old_solution);     // AU^(n-1) into tmp
-        system_rhs.add(-(1 - theta) * time_step, tmp);
-        // DiffusionCoefficient<dim> rhs_function;
-        // rhs_function.set_time(time);
-        // VectorTools::create_right_hand_side(dof_handler,
-        //                                     QGauss<dim>(fe.degree + 1),
-        //                                     // rhs_function,
-        //                                     tmp);
-        // forcing_terms = tmp;
-        // forcing_terms *= time_step * theta;
-        // rhs_function.set_time(time - time_step);
-        // VectorTools::create_right_hand_side(dof_handler,
-        //                                     QGauss<dim>(fe.degree + 1),
-        //                                     // rhs_function,
-        //                                     tmp);
-        // forcing_terms.add(time_step * (1 - theta), tmp);
-        // system_rhs += forcing_terms;
+
+        laplace_matrix.vmult(tmp, old_solution); // AU^(n-1) into tmp
+        system_rhs.add(-(1 - theta) * time_step * DiffusionCoefficient(), tmp);
+
+        assemble_neumann_rhs();
+
+        system_rhs += system_rhs_neumannbc;
+
         system_matrix.copy_from(mass_matrix);
-        system_matrix.add(theta * time_step, laplace_matrix);
+        system_matrix.add(theta * time_step * DiffusionCoefficient(),
+                          laplace_matrix);
+
         constraints.condense(system_matrix, system_rhs);
-        {
-          // BoundaryValues<dim> boundary_values_function;
-          // boundary_values_function.set_time(time);
-          std::map<types::global_dof_index, double> boundary_values;
-          VectorTools::interpolate_boundary_values(dof_handler,
-                                                   0,
-                                                   // boundary_values_function,
-                                                   boundary_values);
-          MatrixTools::apply_boundary_values(boundary_values,
-                                             system_matrix,
-                                             solution,
-                                             system_rhs);
-        }
+
         solve_time_step();
+
         output_results();
+
         if ((timestep_number == 1) &&
             (pre_refinement_step < n_adaptive_pre_refinement_steps))
           {
@@ -310,7 +373,7 @@ namespace SolidDiffusion
                           n_adaptive_pre_refinement_steps);
             ++pre_refinement_step;
             tmp.reinit(solution.size());
-            // forcing_terms.reinit(solution.size());
+            system_rhs_neumannbc.reinit(solution.size());
             std::cout << std::endl;
             goto start_time_iteration;
           }
@@ -320,7 +383,7 @@ namespace SolidDiffusion
                         initial_global_refinement +
                           n_adaptive_pre_refinement_steps);
             tmp.reinit(solution.size());
-            // forcing_terms.reinit(solution.size());
+            system_rhs_neumannbc.reinit(solution.size());
           }
 
         old_solution = solution;
