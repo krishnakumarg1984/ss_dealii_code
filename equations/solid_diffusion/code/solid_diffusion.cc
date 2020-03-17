@@ -109,7 +109,7 @@ namespace SolidDiffusion
     : fe(1)
     , dof_handler(triangulation)
     , time(0.0)
-    , time_step(1.0) // 1 sec or 10 sec is okay as per MC
+    , time_step(0.1) // 1 sec or 10 sec is okay as per MC
     , timestep_number(0)
     , theta(0.5)
   {}
