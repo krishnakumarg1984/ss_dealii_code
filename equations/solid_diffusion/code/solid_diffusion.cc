@@ -99,7 +99,7 @@ namespace SolidDiffusion
   double DiffusionCoefficient() // for now return a constant value; later on
                                 // interpolate from previous two solutions
   {
-    return 0.5;
+    return 1.0;
   }
 
 
