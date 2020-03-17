@@ -178,19 +178,13 @@ namespace SolidDiffusion
       {
         cell_rhs = 0.;
 
-        // Only in 9.2 and above
-        /*
-         * for (const auto &face : cell->face_iterators())
-         *   if (face->at_boundary() && (face->boundary_id() == 1))
-         *     {
-         *       fe_face_values.reinit(cell, face);
-         */
 
         for (unsigned int face_number = 0;
              face_number < GeometryInfo<dim>::faces_per_cell;
              ++face_number)
           if (cell->face(face_number)->at_boundary() &&
-              (cell->face(face_number)->boundary_id() == 1))
+              (cell->face(face_number)->boundary_id() == 0))
+            // In 1D, boundary_id of left edge is 0 and right edge is 1
             {
               fe_face_values.reinit(cell, face_number);
               for (unsigned int q_point = 0; q_point < n_face_q_points;
@@ -298,26 +292,6 @@ namespace SolidDiffusion
 
     GridGenerator::hyper_cube(triangulation); // In 1D, a hypercube is a line
     triangulation.refine_global(initial_global_refinement);
-
-    for (const auto &cell : triangulation.cell_iterators())
-      // In 9.1
-      for (unsigned int face_number = 0;
-           face_number < GeometryInfo<dim>::faces_per_cell;
-           ++face_number)
-        {
-          const auto center = cell->face(face_number)->center();
-          if (std::fabs(center(0)) < 1e-12)
-            cell->face(face_number)->set_boundary_id(1);
-        }
-
-    /* Only in 9.2 and above
-     *   for (const auto &face : cell->face_iterators())
-     *     {
-     *       const auto center = face->center();
-     *       if (std::fabs(center(0)) < 1e-12)
-     *         face->set_boundary_id(1);
-     *     }
-     */
 
     setup_system();
 
