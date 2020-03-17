@@ -190,7 +190,7 @@ namespace SolidDiffusion
               for (unsigned int q_point = 0; q_point < n_face_q_points;
                    ++q_point)
                 {
-                  double neumann_value = -0.1; // currently hard coded
+                  double neumann_value = -0.001; // currently hard coded
                   for (unsigned int i = 0; i < dofs_per_cell; ++i)
                     cell_rhs(i) +=
                       (neumann_value *                          // g(x_q)
