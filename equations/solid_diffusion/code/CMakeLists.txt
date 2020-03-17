@@ -3,10 +3,12 @@
 ##
 
 # Set the name of the project and target:
-SET(TARGET "solid_diffusion")
+SET(PROJECT_NAME "solid_diffusion")
+# SET(TARGET "solid_diffusion")
+SET(TARGET ${PROJECT_NAME}.run)
 
 SET(TARGET_SRC
-  ${TARGET}.cc
+    ${PROJECT_NAME}.cc
   )
 
 # Usually, you will not need to modify anything beyond this point...
