@@ -4,6 +4,7 @@
 *.vtk
 *.vtu
 !compile_commands.json
+*.run
 
 ## Core latex/pdflatex auxiliary files:
 *.aux
