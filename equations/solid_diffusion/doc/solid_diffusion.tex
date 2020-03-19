@@ -16,8 +16,18 @@
     right-delim = \right | ,
     subscr-nudge = 0 mu
 }
+\usepackage{mleftright}
+\mleftright
 
 \usepackage{pdflscape}
+\usepackage{sagetex}
+
+% https://tex.stackexchange.com/questions/281862/drawing-a-double-line
+\newcommand{\doublerule}[1][.4pt]{%
+  \noindent
+  \makebox[0pt][l]{\rule[.7ex]{\linewidth}{#1}}%
+  \rule[.3ex]{\linewidth}{#1}}
+
 
 \begin{document}
 
@@ -95,6 +105,56 @@
             \left(M + k_n \theta D\left(u^\ast\right) A \right) U^n = \left(M - k_n D\left(u^\ast\right) A \left(1-\theta\right)\right) U^{n-1} + \,  {-k_n}\beta\ w\left(0\right)
         \end{equation}
     \end{minipage}
+
+    \newpage
+
+    \setcounter{equation}{0}
+    % \bigskip
+    % \noindent\doublerule[1pt]
+    % \bigskip
+
+    \begin{minipage}{0.51\columnwidth}
+        \begin{center}
+            \underline{Original (MMS)}
+        \end{center}
+        \begin{align}
+            \!\!\!\diffp{u(x,t)}{t} &= \nabla\!\cdot\!D(x) \nabla u(x,t) - \Sigma_a(x) u(x,t) + S(x,t)   \text{ in } \Omega: (0,b) \times (0,b) \\
+            \diffp{u(x,t)}{t} &= \nabla \cdot D\, \nabla u(x,t) - \Sigma_a\, u(x,t) + S(x,t) \text{ in } \Omega: (0,b) \times (0,b) \\
+            \diffp{u(x,t)}{t} &= D\, \triangle u(x,t) - \Sigma_a\, u(x,t) + S(x,t) \text{ in } \Omega: (0,b) \times (0,b)
+            % \end{align}
+            \intertext{Assume $u(x,t) = A \sin\left(\omega t\right)\big(b x - x^2\big)$,}
+            % \begin{align}
+            u(0,t) &= 0\,; \ u(b,0) = 0 \\[1ex]
+            \diffp{u(x,t)}{x}{\mathrlap{x=0}} &= 0\,; \ \diffp{u(x,t)}{x}{\mathrlap{x=b}} = 0
+        \end{align}
+            \begin{sageblock}
+                f(x) = exp(x) * sin(2*x)
+            \end{sageblock}
+
+% This is an example $2+2=\sage{2+2}$. If you raise the current year mod
+% $100$ (which equals $\sage{mod(\the\year, 100)}$) to the power of the
+% current day ($\the\day$), you get $\sage{Integer(mod(\the\year,
+% 100))^\the\day}$. Also, $\the\year$ modulo $42$ is $\sage{\the\year
+% \percent 42}$.
+
+
+        \end{minipage}
+        \hfill
+        \begin{minipage}{0.475\columnwidth}
+            \begin{center}
+                \underline{Modification from Original (MMS)}
+            \end{center}
+            \raggedright
+            \begin{align}
+                \!\!\!\diffp{u(x,t)}{t} &= \nabla\!\cdot\!D(x) \nabla u(x,t) + S(x,t)  \text{ in } \Omega: (0,b),\, b = 1\\
+                \diffp{u(x,t)}{t} &= \nabla \cdot D\, \nabla u(x,t) + S(x,t)   \text{ in } \Omega: (0,b),\, b = 1\\
+                \diffp{u(x,t)}{t} &= D\, \triangle u(x,t) + S(x,t)  \text{ in } \Omega: (0,b),\, b = 1\\
+                \intertext{Assume $u(x,t) = A \sin\left(\omega t\right)\big(b x - x^2\big),\, b=1$,}
+                % \begin{align}
+                \vphantom{u(0,t) = 0\,; \ u(b,0) = 0,\ b =1} \notag\\[1ex]
+                \diffp{u(x,t)}{x}{\mathrlap{x=0}} &= -\beta\,; \ \diffp{u(x,t)}{x}{\mathrlap{\substack{x=b,\\b=1}}} = 0
+            \end{align}
+        \end{minipage}
 
 \end{landscape}
 

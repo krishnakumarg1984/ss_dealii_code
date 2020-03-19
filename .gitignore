@@ -5,6 +5,7 @@
 *.vtu
 !compile_commands.json
 *.run
+*.sagetex.sage.py
 
 ## Core latex/pdflatex auxiliary files:
 *.aux
