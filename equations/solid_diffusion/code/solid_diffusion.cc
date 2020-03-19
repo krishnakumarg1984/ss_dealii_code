@@ -1,25 +1,24 @@
-/*
- * Solid State Battery Diffusion Simulator
- * Copyright © 2020 Krishnakumar Gopalakrishnan, University College London
+/* ---------------------------------------------------------------------
  *
- * This library is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published
- * by the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
+ * Copyright (C) 2014 - 2019 by the deal.II authors
  *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Lesser General Public License for more details.
+ * This file is part of the deal.II library.
  *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this library; if not, see <http://www.gnu.org/licenses/>.
+ * The deal.II library is free software; you can use it, redistribute
+ * it, and/or modify it under the terms of the GNU Lesser General
+ * Public License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ * The full text of the license can be found in the file LICENSE.md at
+ * the top level directory of deal.II.
+ *
+ * ---------------------------------------------------------------------
+ *
+ * Authors: Damien Lebrun-Grandie, Bruno Turcksin, 2014
  */
 
 #include <deal.II/base/function.h>
-#include <deal.II/base/logstream.h>
 #include <deal.II/base/quadrature_lib.h>
-#include <deal.II/base/utilities.h>
+#include <deal.II/base/time_stepping.h>
 
 #include <deal.II/dofs/dof_accessor.h>
 #include <deal.II/dofs/dof_handler.h>
@@ -27,355 +26,477 @@
 
 #include <deal.II/fe/fe_q.h>
 #include <deal.II/fe/fe_values.h>
-// #include <deal.II/fe/mapping_q1.h>
 
 #include <deal.II/grid/grid_generator.h>
-// #include <deal.II/grid/grid_out.h>
-#include <deal.II/grid/grid_refinement.h>
+#include <deal.II/grid/grid_out.h>
 #include <deal.II/grid/tria.h>
 #include <deal.II/grid/tria_accessor.h>
 #include <deal.II/grid/tria_iterator.h>
 
 #include <deal.II/lac/affine_constraints.h>
-#include <deal.II/lac/dynamic_sparsity_pattern.h>
-#include <deal.II/lac/full_matrix.h>
-#include <deal.II/lac/precondition.h>
-#include <deal.II/lac/solver_cg.h>
-#include <deal.II/lac/sparse_matrix.h>
-#include <deal.II/lac/vector.h>
+#include <deal.II/lac/sparse_direct.h>
 
 #include <deal.II/numerics/data_out.h>
-#include <deal.II/numerics/error_estimator.h>
-#include <deal.II/numerics/matrix_tools.h>
-#include <deal.II/numerics/solution_transfer.h>
 #include <deal.II/numerics/vector_tools.h>
 
+#include <cmath>
 #include <fstream>
 #include <iostream>
-
-namespace SolidDiffusion
+#include <map>
+namespace Step52
 {
   using namespace dealii;
-
-  template <int dim>
-  class DiffusionEquation
+  class Diffusion
   {
   public:
-    DiffusionEquation();
+    Diffusion();
     void run();
 
   private:
-    void setup_system();
-    void assemble_neumann_rhs();
-    void solve_time_step();
-    void output_results() const;
-    void refine_mesh(const unsigned int min_grid_level,
-                     const unsigned int max_grid_level);
-
-    Triangulation<dim> triangulation;
-    FE_Q<dim>          fe;
-    DoFHandler<dim>    dof_handler;
-
-    AffineConstraints<double> constraints; // hanging_node_constraints
-
-    SparsityPattern      sparsity_pattern;
-    SparseMatrix<double> mass_matrix;
-    SparseMatrix<double> laplace_matrix;
-    SparseMatrix<double> system_matrix;
-
-    Vector<double> solution;
-    Vector<double> old_solution;
-    Vector<double> system_rhs;
-    Vector<double> system_rhs_neumannbc;
-
-    double       time;
-    double       time_step;
-    unsigned int timestep_number;
-
-    const double theta;
+    void           setup_system();
+    void           assemble_system();
+    double         get_source(const double time, const Point<2> &point) const;
+    Vector<double> evaluate_diffusion(const double          time,
+                                      const Vector<double> &y) const;
+    Vector<double> id_minus_tau_J_inverse(const double          time,
+                                          const double          tau,
+                                          const Vector<double> &y);
+    void           output_results(const unsigned int               time_step,
+                                  TimeStepping::runge_kutta_method method) const;
+    void explicit_method(const TimeStepping::runge_kutta_method method,
+                         const unsigned int                     n_time_steps,
+                         const double                           initial_time,
+                         const double                           final_time);
+    void implicit_method(const TimeStepping::runge_kutta_method method,
+                         const unsigned int                     n_time_steps,
+                         const double                           initial_time,
+                         const double                           final_time);
+    unsigned int
+                              embedded_explicit_method(const TimeStepping::runge_kutta_method method,
+                                                       const unsigned int n_time_steps,
+                                                       const double       initial_time,
+                                                       const double       final_time);
+    const unsigned int        fe_degree;
+    const double              diffusion_coefficient;
+    const double              absorption_cross_section;
+    Triangulation<2>          triangulation;
+    const FE_Q<2>             fe;
+    DoFHandler<2>             dof_handler;
+    AffineConstraints<double> constraint_matrix;
+    SparsityPattern           sparsity_pattern;
+    SparseMatrix<double>      system_matrix;
+    SparseMatrix<double>      mass_matrix;
+    SparseMatrix<double>      mass_minus_tau_Jacobian;
+    SparseDirectUMFPACK       inverse_mass_matrix;
+    Vector<double>            solution;
   };
-
-
-  double DiffusionCoefficient() // for now return a constant value; later on
-                                // interpolate from previous two solutions
-  {
-    return 1.0;
-  }
-
-
-  // Constructor for the class DiffusionEquation
-  template <int dim>
-  DiffusionEquation<dim>::DiffusionEquation()
-    : fe(1)
+  Diffusion::Diffusion()
+    : fe_degree(2)
+    , diffusion_coefficient(1. / 30.)
+    , absorption_cross_section(1.)
+    , fe(fe_degree)
     , dof_handler(triangulation)
-    , time(0.0)
-    , time_step(0.1) // 1 sec or 10 sec is okay as per MC
-    , timestep_number(0)
-    , theta(0.5)
   {}
-
-
-  template <int dim>
-  void DiffusionEquation<dim>::setup_system()
+  void Diffusion::setup_system()
   {
     dof_handler.distribute_dofs(fe);
-
-    std::cout << std::endl
-              << "===========================================" << std::endl
-              << "Number of active cells: " << triangulation.n_active_cells()
-              << std::endl
-              << "Number of degrees of freedom: " << dof_handler.n_dofs()
-              << std::endl
-              << std::endl;
-
-    constraints.clear();
-    DoFTools::make_hanging_node_constraints(dof_handler, constraints);
-    constraints.close();
-
+    VectorTools::interpolate_boundary_values(dof_handler,
+                                             1,
+                                             Functions::ZeroFunction<2>(),
+                                             constraint_matrix);
+    constraint_matrix.close();
     DynamicSparsityPattern dsp(dof_handler.n_dofs());
-    DoFTools::make_sparsity_pattern(dof_handler,
-                                    dsp,
-                                    constraints,
-                                    /*keep_constrained_dofs = */ true);
+    DoFTools::make_sparsity_pattern(dof_handler, dsp, constraint_matrix);
     sparsity_pattern.copy_from(dsp);
-
-    mass_matrix.reinit(sparsity_pattern);
-    laplace_matrix.reinit(sparsity_pattern);
     system_matrix.reinit(sparsity_pattern);
-
-    MatrixCreator::create_mass_matrix(dof_handler,
-                                      QGauss<dim>(fe.degree + 1),
-                                      mass_matrix);
-    MatrixCreator::create_laplace_matrix(dof_handler,
-                                         QGauss<dim>(fe.degree + 1),
-                                         laplace_matrix);
-
+    mass_matrix.reinit(sparsity_pattern);
+    mass_minus_tau_Jacobian.reinit(sparsity_pattern);
     solution.reinit(dof_handler.n_dofs());
-    old_solution.reinit(dof_handler.n_dofs());
-    system_rhs.reinit(dof_handler.n_dofs());
-    system_rhs_neumannbc.reinit(dof_handler.n_dofs());
   }
-
-  template <int dim>
-  void DiffusionEquation<dim>::assemble_neumann_rhs()
+  void Diffusion::assemble_system()
   {
-    QGauss<dim - 1> face_quadrature_formula(fe.degree + 1);
-
-    const unsigned int n_face_q_points = face_quadrature_formula.size();
-
-    // const unsigned int dofs_per_cell = fe->dofs_per_cell;
+    system_matrix = 0.;
+    mass_matrix   = 0.;
+    const QGauss<2>    quadrature_formula(fe_degree + 1);
+    FEValues<2>        fe_values(fe,
+                          quadrature_formula,
+                          update_values | update_gradients | update_JxW_values);
     const unsigned int dofs_per_cell = fe.dofs_per_cell;
-
-    Vector<double> cell_rhs(dofs_per_cell);
-
+    const unsigned int n_q_points    = quadrature_formula.size();
+    FullMatrix<double> cell_matrix(dofs_per_cell, dofs_per_cell);
+    FullMatrix<double> cell_mass_matrix(dofs_per_cell, dofs_per_cell);
     std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
-
-    FEFaceValues<dim> fe_face_values(fe,
-                                     face_quadrature_formula,
-                                     update_values | update_JxW_values);
-
     for (const auto &cell : dof_handler.active_cell_iterators())
       {
-        cell_rhs = 0.;
-
-
-        for (unsigned int face_number = 0;
-             face_number < GeometryInfo<dim>::faces_per_cell;
-             ++face_number)
-          if (cell->face(face_number)->at_boundary() &&
-              (cell->face(face_number)->boundary_id() == 0))
-            // In 1D, boundary_id of left edge is 0 and right edge is 1
-            {
-              fe_face_values.reinit(cell, face_number);
-              for (unsigned int q_point = 0; q_point < n_face_q_points;
-                   ++q_point)
-                {
-                  double neumann_value = -0.001; // currently hard coded
-                  for (unsigned int i = 0; i < dofs_per_cell; ++i)
-                    cell_rhs(i) +=
-                      (neumann_value *                          // g(x_q)
-                       fe_face_values.shape_value(i, q_point) * // phi_i(x_q)
-                       fe_face_values.JxW(q_point));            // dx
-                }
-            }
-
+        cell_matrix      = 0.;
+        cell_mass_matrix = 0.;
+        fe_values.reinit(cell);
+        for (unsigned int q_point = 0; q_point < n_q_points; ++q_point)
+          for (unsigned int i = 0; i < dofs_per_cell; ++i)
+            for (unsigned int j = 0; j < dofs_per_cell; ++j)
+              {
+                cell_matrix(i, j) +=
+                  ((-diffusion_coefficient *                // (-D
+                      fe_values.shape_grad(i, q_point) *    //  * grad phi_i
+                      fe_values.shape_grad(j, q_point)      //  * grad phi_j
+                    - absorption_cross_section *            //  -Sigma
+                        fe_values.shape_value(i, q_point) * //  * phi_i
+                        fe_values.shape_value(j, q_point))  //  * phi_j)
+                   * fe_values.JxW(q_point));               // * dx
+                cell_mass_matrix(i, j) += fe_values.shape_value(i, q_point) *
+                                          fe_values.shape_value(j, q_point) *
+                                          fe_values.JxW(q_point);
+              }
         cell->get_dof_indices(local_dof_indices);
-        for (unsigned int i = 0; i < dofs_per_cell; ++i)
-          system_rhs_neumannbc(local_dof_indices[i]) += cell_rhs(i);
+        constraint_matrix.distribute_local_to_global(cell_matrix,
+                                                     local_dof_indices,
+                                                     system_matrix);
+        constraint_matrix.distribute_local_to_global(cell_mass_matrix,
+                                                     local_dof_indices,
+                                                     mass_matrix);
       }
-  } // namespace SolidDiffusion
-
-  template <int dim>
-  void DiffusionEquation<dim>::solve_time_step()
-  {
-    SolverControl solver_control(1000, 1e-8 * system_rhs.l2_norm());
-    SolverCG<>    cg(solver_control);
-
-    PreconditionSSOR<> preconditioner;
-    preconditioner.initialize(system_matrix, 1.0);
-
-    cg.solve(system_matrix, solution, system_rhs, preconditioner);
-
-    constraints.distribute(solution);
-
-    std::cout << "     " << solver_control.last_step() << " CG iterations."
-              << std::endl;
+    inverse_mass_matrix.initialize(mass_matrix);
   }
-
-
-  template <int dim>
-  void DiffusionEquation<dim>::output_results() const
+  double Diffusion::get_source(const double time, const Point<2> &point) const
   {
-    DataOut<dim> data_out;
-
+    const double intensity = 10.;
+    const double frequency = numbers::PI / 10.;
+    const double b         = 5.;
+    const double x         = point(0);
+    return intensity *
+           (frequency * std::cos(frequency * time) * (b * x - x * x) +
+            std::sin(frequency * time) *
+              (absorption_cross_section * (b * x - x * x) +
+               2. * diffusion_coefficient));
+  }
+  Vector<double> Diffusion::evaluate_diffusion(const double          time,
+                                               const Vector<double> &y) const
+  {
+    Vector<double> tmp(dof_handler.n_dofs());
+    tmp = 0.;
+    system_matrix.vmult(tmp, y);
+    const QGauss<2>                      quadrature_formula(fe_degree + 1);
+    FEValues<2>                          fe_values(fe,
+                          quadrature_formula,
+                          update_values | update_quadrature_points |
+                            update_JxW_values);
+    const unsigned int                   dofs_per_cell = fe.dofs_per_cell;
+    const unsigned int                   n_q_points = quadrature_formula.size();
+    Vector<double>                       cell_source(dofs_per_cell);
+    std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
+    for (const auto &cell : dof_handler.active_cell_iterators())
+      {
+        cell_source = 0.;
+        fe_values.reinit(cell);
+        for (unsigned int q_point = 0; q_point < n_q_points; ++q_point)
+          {
+            const double source =
+              get_source(time, fe_values.quadrature_point(q_point));
+            for (unsigned int i = 0; i < dofs_per_cell; ++i)
+              cell_source(i) += fe_values.shape_value(i, q_point) * // phi_i(x)
+                                source *                            // * S(x)
+                                fe_values.JxW(q_point);             // * dx
+          }
+        cell->get_dof_indices(local_dof_indices);
+        constraint_matrix.distribute_local_to_global(cell_source,
+                                                     local_dof_indices,
+                                                     tmp);
+      }
+    Vector<double> value(dof_handler.n_dofs());
+    inverse_mass_matrix.vmult(value, tmp);
+    return value;
+  }
+  Vector<double> Diffusion::id_minus_tau_J_inverse(const double /*time*/,
+                                                   const double          tau,
+                                                   const Vector<double> &y)
+  {
+    SparseDirectUMFPACK inverse_mass_minus_tau_Jacobian;
+    mass_minus_tau_Jacobian.copy_from(mass_matrix);
+    mass_minus_tau_Jacobian.add(-tau, system_matrix);
+    inverse_mass_minus_tau_Jacobian.initialize(mass_minus_tau_Jacobian);
+    Vector<double> tmp(dof_handler.n_dofs());
+    mass_matrix.vmult(tmp, y);
+    Vector<double> result(y);
+    inverse_mass_minus_tau_Jacobian.vmult(result, tmp);
+    return result;
+  }
+  void Diffusion::output_results(const unsigned int               time_step,
+                                 TimeStepping::runge_kutta_method method) const
+  {
+    std::string method_name;
+    switch (method)
+      {
+          case TimeStepping::FORWARD_EULER: {
+            method_name = "forward_euler";
+            break;
+          }
+          case TimeStepping::RK_THIRD_ORDER: {
+            method_name = "rk3";
+            break;
+          }
+          case TimeStepping::RK_CLASSIC_FOURTH_ORDER: {
+            method_name = "rk4";
+            break;
+          }
+          case TimeStepping::BACKWARD_EULER: {
+            method_name = "backward_euler";
+            break;
+          }
+          case TimeStepping::IMPLICIT_MIDPOINT: {
+            method_name = "implicit_midpoint";
+            break;
+          }
+          case TimeStepping::SDIRK_TWO_STAGES: {
+            method_name = "sdirk";
+            break;
+          }
+          case TimeStepping::HEUN_EULER: {
+            method_name = "heun_euler";
+            break;
+          }
+          case TimeStepping::BOGACKI_SHAMPINE: {
+            method_name = "bocacki_shampine";
+            break;
+          }
+          case TimeStepping::DOPRI: {
+            method_name = "dopri";
+            break;
+          }
+          case TimeStepping::FEHLBERG: {
+            method_name = "fehlberg";
+            break;
+          }
+          case TimeStepping::CASH_KARP: {
+            method_name = "cash_karp";
+            break;
+          }
+          default: {
+            break;
+          }
+      }
+    DataOut<2> data_out;
     data_out.attach_dof_handler(dof_handler);
-    data_out.add_data_vector(solution, "x_Li");
-
+    data_out.add_data_vector(solution, "solution");
     data_out.build_patches();
-
-    const std::string filename = "solution_timestep_" +
-                                 Utilities::int_to_string(timestep_number, 3) +
+    const std::string filename = "solution-" + method_name + "-" +
+                                 Utilities::int_to_string(time_step, 3) +
                                  ".vtu";
-                                 // ".gnuplot";
     std::ofstream output(filename);
     data_out.write_vtu(output);
-    // data_out.write_gnuplot(output);
   }
-
-
-  template <int dim>
-  void DiffusionEquation<dim>::refine_mesh(const unsigned int min_grid_level,
-                                           const unsigned int max_grid_level)
+  void Diffusion::explicit_method(const TimeStepping::runge_kutta_method method,
+                                  const unsigned int n_time_steps,
+                                  const double       initial_time,
+                                  const double       final_time)
   {
-    Vector<float> estimated_error_per_cell(triangulation.n_active_cells());
-
-    KellyErrorEstimator<dim>::estimate(
-      dof_handler,
-      QGauss<dim - 1>(fe.degree + 1),
-      std::map<types::boundary_id, const Function<dim> *>(),
-      solution,
-      estimated_error_per_cell);
-
-    GridRefinement::refine_and_coarsen_fixed_fraction(triangulation,
-                                                      estimated_error_per_cell,
-                                                      0.6,
-                                                      0.4);
-
-    if (triangulation.n_levels() > max_grid_level)
-      for (const auto &cell :
-           triangulation.active_cell_iterators_on_level(max_grid_level))
-        cell->clear_refine_flag();
-    for (const auto &cell :
-         triangulation.active_cell_iterators_on_level(min_grid_level))
-      cell->clear_coarsen_flag();
-
-    SolutionTransfer<dim> solution_trans(dof_handler);
-
-    Vector<double> previous_solution;
-    previous_solution = solution;
-    triangulation.prepare_coarsening_and_refinement();
-    solution_trans.prepare_for_coarsening_and_refinement(previous_solution);
-
-    triangulation.execute_coarsening_and_refinement();
-    setup_system();
-
-    solution_trans.interpolate(previous_solution, solution);
-    constraints.distribute(solution);
-  }
-
-
-  template <int dim>
-  void DiffusionEquation<dim>::run()
-  {
-    const unsigned int initial_global_refinement       = 3;
-    const unsigned int n_adaptive_pre_refinement_steps = 6;
-
-    GridGenerator::hyper_cube(triangulation); // In 1D, a hypercube is a line
-    triangulation.refine_global(initial_global_refinement);
-
-    setup_system();
-
-    unsigned int pre_refinement_step = 0;
-
-    Vector<double> tmp; // for holding temporary RHS quantities
-
-  start_time_iteration:
-
-    tmp.reinit(solution.size());
-
-
-    VectorTools::interpolate(dof_handler,
-                             // Functions::ZeroFunction<dim>(),
-                             Functions::ConstantFunction<dim>(0.5), // init x_Li
-                             old_solution);
-
-    solution = old_solution;
-
-    output_results();
-
-    while (time <= 10) // end time is hard-coded here for now
+    const double time_step =
+      (final_time - initial_time) / static_cast<double>(n_time_steps);
+    double time = initial_time;
+    solution    = 0.;
+    constraint_matrix.distribute(solution);
+    TimeStepping::ExplicitRungeKutta<Vector<double>> explicit_runge_kutta(
+      method);
+    output_results(0, method);
+    for (unsigned int i = 0; i < n_time_steps; ++i)
       {
-        time += time_step;
-        ++timestep_number;
-
-        std::cout << "Time step " << timestep_number << " at t=" << time
-                  << std::endl;
-
-        mass_matrix.vmult(system_rhs, old_solution); // MU^(n-1) into system_rhs
-
-        laplace_matrix.vmult(tmp, old_solution); // AU^(n-1) into tmp
-        system_rhs.add(-(1 - theta) * time_step * DiffusionCoefficient(), tmp);
-
-        assemble_neumann_rhs();
-
-        system_rhs += system_rhs_neumannbc;
-
-        system_matrix.copy_from(mass_matrix);
-        system_matrix.add(theta * time_step * DiffusionCoefficient(),
-                          laplace_matrix);
-
-        constraints.condense(system_matrix, system_rhs);
-
-        solve_time_step();
-
-        output_results();
-
-        if ((timestep_number == 1) &&
-            (pre_refinement_step < n_adaptive_pre_refinement_steps))
-          {
-            refine_mesh(initial_global_refinement,
-                        initial_global_refinement +
-                          n_adaptive_pre_refinement_steps);
-            ++pre_refinement_step;
-            tmp.reinit(solution.size());
-            system_rhs_neumannbc.reinit(solution.size());
-            std::cout << std::endl;
-            goto start_time_iteration;
-          }
-        else if ((timestep_number > 0) && (timestep_number % 5 == 0))
-          {
-            refine_mesh(initial_global_refinement,
-                        initial_global_refinement +
-                          n_adaptive_pre_refinement_steps);
-            tmp.reinit(solution.size());
-            system_rhs_neumannbc.reinit(solution.size());
-          }
-
-        old_solution = solution;
+        time = explicit_runge_kutta.evolve_one_time_step(
+          [this](const double time, const Vector<double> &y) {
+            return this->evaluate_diffusion(time, y);
+          },
+          time,
+          time_step,
+          solution);
+        constraint_matrix.distribute(solution);
+        if ((i + 1) % 10 == 0)
+          output_results(i + 1, method);
       }
   }
-} // namespace SolidDiffusion
-
-
+  void Diffusion::implicit_method(const TimeStepping::runge_kutta_method method,
+                                  const unsigned int n_time_steps,
+                                  const double       initial_time,
+                                  const double       final_time)
+  {
+    const double time_step =
+      (final_time - initial_time) / static_cast<double>(n_time_steps);
+    double time = initial_time;
+    solution    = 0.;
+    constraint_matrix.distribute(solution);
+    TimeStepping::ImplicitRungeKutta<Vector<double>> implicit_runge_kutta(
+      method);
+    output_results(0, method);
+    for (unsigned int i = 0; i < n_time_steps; ++i)
+      {
+        time = implicit_runge_kutta.evolve_one_time_step(
+          [this](const double time, const Vector<double> &y) {
+            return this->evaluate_diffusion(time, y);
+          },
+          [this](const double time, const double tau, const Vector<double> &y) {
+            return this->id_minus_tau_J_inverse(time, tau, y);
+          },
+          time,
+          time_step,
+          solution);
+        constraint_matrix.distribute(solution);
+        if ((i + 1) % 10 == 0)
+          output_results(i + 1, method);
+      }
+  }
+  unsigned int Diffusion::embedded_explicit_method(
+    const TimeStepping::runge_kutta_method method,
+    const unsigned int                     n_time_steps,
+    const double                           initial_time,
+    const double                           final_time)
+  {
+    double time_step =
+      (final_time - initial_time) / static_cast<double>(n_time_steps);
+    double       time          = initial_time;
+    const double coarsen_param = 1.2;
+    const double refine_param  = 0.8;
+    const double min_delta     = 1e-8;
+    const double max_delta     = 10 * time_step;
+    const double refine_tol    = 1e-1;
+    const double coarsen_tol   = 1e-5;
+    solution                   = 0.;
+    constraint_matrix.distribute(solution);
+    TimeStepping::EmbeddedExplicitRungeKutta<Vector<double>>
+      embedded_explicit_runge_kutta(method,
+                                    coarsen_param,
+                                    refine_param,
+                                    min_delta,
+                                    max_delta,
+                                    refine_tol,
+                                    coarsen_tol);
+    output_results(0, method);
+    unsigned int n_steps = 0;
+    while (time < final_time)
+      {
+        if (time + time_step > final_time)
+          time_step = final_time - time;
+        time = embedded_explicit_runge_kutta.evolve_one_time_step(
+          [this](const double time, const Vector<double> &y) {
+            return this->evaluate_diffusion(time, y);
+          },
+          time,
+          time_step,
+          solution);
+        constraint_matrix.distribute(solution);
+        if ((n_steps + 1) % 10 == 0)
+          output_results(n_steps + 1, method);
+        time_step = embedded_explicit_runge_kutta.get_status().delta_t_guess;
+        ++n_steps;
+      }
+    return n_steps;
+  }
+  void Diffusion::run()
+  {
+    GridGenerator::hyper_cube(triangulation, 0., 5.);
+    triangulation.refine_global(4);
+    for (const auto &cell : triangulation.active_cell_iterators())
+      for (unsigned int f = 0; f < GeometryInfo<2>::faces_per_cell; ++f)
+        if (cell->face(f)->at_boundary())
+          {
+            if ((cell->face(f)->center()[0] == 0.) ||
+                (cell->face(f)->center()[0] == 5.))
+              cell->face(f)->set_boundary_id(1);
+            else
+              cell->face(f)->set_boundary_id(0);
+          }
+    setup_system();
+    assemble_system();
+    unsigned int       n_steps      = 0;
+    const unsigned int n_time_steps = 200;
+    const double       initial_time = 0.;
+    const double       final_time   = 10.;
+    std::cout << "Explicit methods:" << std::endl;
+    explicit_method(TimeStepping::FORWARD_EULER,
+                    n_time_steps,
+                    initial_time,
+                    final_time);
+    std::cout << "Forward Euler:            error=" << solution.l2_norm()
+              << std::endl;
+    explicit_method(TimeStepping::RK_THIRD_ORDER,
+                    n_time_steps,
+                    initial_time,
+                    final_time);
+    std::cout << "Third order Runge-Kutta:  error=" << solution.l2_norm()
+              << std::endl;
+    explicit_method(TimeStepping::RK_CLASSIC_FOURTH_ORDER,
+                    n_time_steps,
+                    initial_time,
+                    final_time);
+    std::cout << "Fourth order Runge-Kutta: error=" << solution.l2_norm()
+              << std::endl;
+    std::cout << std::endl;
+    std::cout << "Implicit methods:" << std::endl;
+    implicit_method(TimeStepping::BACKWARD_EULER,
+                    n_time_steps,
+                    initial_time,
+                    final_time);
+    std::cout << "Backward Euler:           error=" << solution.l2_norm()
+              << std::endl;
+    implicit_method(TimeStepping::IMPLICIT_MIDPOINT,
+                    n_time_steps,
+                    initial_time,
+                    final_time);
+    std::cout << "Implicit Midpoint:        error=" << solution.l2_norm()
+              << std::endl;
+    implicit_method(TimeStepping::CRANK_NICOLSON,
+                    n_time_steps,
+                    initial_time,
+                    final_time);
+    std::cout << "Crank-Nicolson:           error=" << solution.l2_norm()
+              << std::endl;
+    implicit_method(TimeStepping::SDIRK_TWO_STAGES,
+                    n_time_steps,
+                    initial_time,
+                    final_time);
+    std::cout << "SDIRK:                    error=" << solution.l2_norm()
+              << std::endl;
+    std::cout << std::endl;
+    std::cout << "Embedded explicit methods:" << std::endl;
+    n_steps = embedded_explicit_method(TimeStepping::HEUN_EULER,
+                                       n_time_steps,
+                                       initial_time,
+                                       final_time);
+    std::cout << "Heun-Euler:               error=" << solution.l2_norm()
+              << std::endl;
+    std::cout << "                steps performed=" << n_steps << std::endl;
+    n_steps = embedded_explicit_method(TimeStepping::BOGACKI_SHAMPINE,
+                                       n_time_steps,
+                                       initial_time,
+                                       final_time);
+    std::cout << "Bogacki-Shampine:         error=" << solution.l2_norm()
+              << std::endl;
+    std::cout << "                steps performed=" << n_steps << std::endl;
+    n_steps = embedded_explicit_method(TimeStepping::DOPRI,
+                                       n_time_steps,
+                                       initial_time,
+                                       final_time);
+    std::cout << "Dopri:                    error=" << solution.l2_norm()
+              << std::endl;
+    std::cout << "                steps performed=" << n_steps << std::endl;
+    n_steps = embedded_explicit_method(TimeStepping::FEHLBERG,
+                                       n_time_steps,
+                                       initial_time,
+                                       final_time);
+    std::cout << "Fehlberg:                 error=" << solution.l2_norm()
+              << std::endl;
+    std::cout << "                steps performed=" << n_steps << std::endl;
+    n_steps = embedded_explicit_method(TimeStepping::CASH_KARP,
+                                       n_time_steps,
+                                       initial_time,
+                                       final_time);
+    std::cout << "Cash-Karp:                error=" << solution.l2_norm()
+              << std::endl;
+    std::cout << "                steps performed=" << n_steps << std::endl;
+  }
+} // namespace Step52
 int main()
 {
   try
     {
-      using namespace dealii;
-      using namespace SolidDiffusion;
-
-      DiffusionEquation<1> diffusion_equation_solver;
-      diffusion_equation_solver.run();
+      Step52::Diffusion diffusion;
+      diffusion.run();
     }
   catch (std::exception &exc)
     {
@@ -388,7 +509,6 @@ int main()
                 << "Aborting!" << std::endl
                 << "----------------------------------------------------"
                 << std::endl;
-
       return 1;
     }
   catch (...)
@@ -402,7 +522,6 @@ int main()
                 << "----------------------------------------------------"
                 << std::endl;
       return 1;
-    }
-
+    };
   return 0;
 }
