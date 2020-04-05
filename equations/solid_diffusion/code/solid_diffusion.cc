@@ -64,21 +64,10 @@ namespace SSBatteryScaledDiffusionEqn
                         const unsigned int               time_step,
                         TimeStepping::runge_kutta_method method) const;
 
-    void explicit_method(const TimeStepping::runge_kutta_method method,
-                         const unsigned int                     n_time_steps,
-                         const double                           initial_time,
-                         const double                           final_time);
-
     void implicit_method(const TimeStepping::runge_kutta_method method,
                          const unsigned int                     n_time_steps,
                          const double                           initial_time,
                          const double                           final_time);
-
-    unsigned int
-    embedded_explicit_method(const TimeStepping::runge_kutta_method method,
-                             const unsigned int n_time_steps,
-                             const double       initial_time,
-                             const double       final_time);
 
     const unsigned int fe_degree;
 
@@ -298,22 +287,11 @@ namespace SSBatteryScaledDiffusionEqn
     const unsigned int               time_step,
     TimeStepping::runge_kutta_method method) const
   {
-    std::string method_name;
+    std::string        method_name;
+    static std::string method_name_prev = "";
 
     switch (method)
       {
-          case TimeStepping::FORWARD_EULER: {
-            method_name = "forward_euler";
-            break;
-          }
-          case TimeStepping::RK_THIRD_ORDER: {
-            method_name = "rk3";
-            break;
-          }
-          case TimeStepping::RK_CLASSIC_FOURTH_ORDER: {
-            method_name = "rk4";
-            break;
-          }
           case TimeStepping::BACKWARD_EULER: {
             method_name = "backward_euler";
             break;
@@ -326,26 +304,6 @@ namespace SSBatteryScaledDiffusionEqn
             method_name = "sdirk";
             break;
           }
-          case TimeStepping::HEUN_EULER: {
-            method_name = "heun_euler";
-            break;
-          }
-          case TimeStepping::BOGACKI_SHAMPINE: {
-            method_name = "bocacki_shampine";
-            break;
-          }
-          case TimeStepping::DOPRI: {
-            method_name = "dopri";
-            break;
-          }
-          case TimeStepping::FEHLBERG: {
-            method_name = "fehlberg";
-            break;
-          }
-          case TimeStepping::CASH_KARP: {
-            method_name = "cash_karp";
-            break;
-          }
           default: {
             break;
           }
@@ -354,53 +312,33 @@ namespace SSBatteryScaledDiffusionEqn
     DataOut<dim> data_out;
 
     data_out.attach_dof_handler(dof_handler);
-    data_out.add_data_vector(solution, "solution");
-
+    std::string solution_name = "solution_" + method_name;
+    data_out.add_data_vector(solution, solution_name);
     data_out.build_patches();
 
     data_out.set_flags(DataOutBase::VtkFlags(time, time_step));
 
-    const std::string filename = "solution-" + method_name + "-" +
-                                 Utilities::int_to_string(time_step, 3) +
-                                 ".vtu";
+    const std::string filename =
+      solution_name + Utilities::int_to_string(time_step, 3) + ".vtu";
     std::ofstream output(filename);
     data_out.write_vtu(output);
-  }
 
-  template <int dim>
-  void SolidDiffusion<dim>::explicit_method(
-    const TimeStepping::runge_kutta_method method,
-    const unsigned int                     n_time_steps,
-    const double                           initial_time,
-    const double                           final_time)
-  {
-    const double time_step =
-      (final_time - initial_time) / static_cast<double>(n_time_steps);
-    double time = initial_time;
+    static std::vector<std::pair<double, std::string>> times_and_names;
 
-    solution = 0.;
-    constraint_matrix.distribute(solution);
-
-    TimeStepping::ExplicitRungeKutta<Vector<double>> explicit_runge_kutta(
-      method);
-    output_results(time, 0, method);
-    for (unsigned int i = 0; i < n_time_steps; ++i)
+    if (method_name_prev != method_name)
       {
-        time = explicit_runge_kutta.evolve_one_time_step(
-          [this](const double time, const Vector<double> &y) {
-            return this->evaluate_diffusion(time, y);
-          },
-          time,
-          time_step,
-          solution);
-
-        constraint_matrix.distribute(solution);
-
-        if ((i + 1) % 10 == 0)
-          output_results(time, i + 1, method);
+        std::cout << "Starting a new method" << std::endl;
+        times_and_names.clear();
       }
-  }
 
+    method_name_prev = method_name;
+
+    times_and_names.push_back(std::pair<double, std::string>(time, filename));
+
+    const std::string pvd_filename = "solution_" + method_name + ".pvd";
+    std::ofstream     pvd_output(pvd_filename);
+    DataOutBase::write_pvd_record(pvd_output, times_and_names);
+  }
 
   template <int dim>
   void SolidDiffusion<dim>::implicit_method(
@@ -441,63 +379,6 @@ namespace SSBatteryScaledDiffusionEqn
 
 
   template <int dim>
-  unsigned int SolidDiffusion<dim>::embedded_explicit_method(
-    const TimeStepping::runge_kutta_method method,
-    const unsigned int                     n_time_steps,
-    const double                           initial_time,
-    const double                           final_time)
-  {
-    double time_step =
-      (final_time - initial_time) / static_cast<double>(n_time_steps);
-    double       time          = initial_time;
-    const double coarsen_param = 1.2;
-    const double refine_param  = 0.8;
-    const double min_delta     = 1e-8;
-    const double max_delta     = 10 * time_step;
-    const double refine_tol    = 1e-1;
-    const double coarsen_tol   = 1e-5;
-
-    solution = 0.;
-    constraint_matrix.distribute(solution);
-
-    TimeStepping::EmbeddedExplicitRungeKutta<Vector<double>>
-      embedded_explicit_runge_kutta(method,
-                                    coarsen_param,
-                                    refine_param,
-                                    min_delta,
-                                    max_delta,
-                                    refine_tol,
-                                    coarsen_tol);
-    output_results(time, 0, method);
-
-    unsigned int n_steps = 0;
-    while (time < final_time)
-      {
-        if (time + time_step > final_time)
-          time_step = final_time - time;
-
-        time = embedded_explicit_runge_kutta.evolve_one_time_step(
-          [this](const double time, const Vector<double> &y) {
-            return this->evaluate_diffusion(time, y);
-          },
-          time,
-          time_step,
-          solution);
-
-        constraint_matrix.distribute(solution);
-
-        if ((n_steps + 1) % 10 == 0)
-          output_results(time, n_steps + 1, method);
-
-        time_step = embedded_explicit_runge_kutta.get_status().delta_t_guess;
-        ++n_steps;
-      }
-
-    return n_steps;
-  }
-
-
-  template <int dim>
   void SolidDiffusion<dim>::run()
   {
     GridGenerator::hyper_cube(triangulation, 0., 5.); // b = 5
@@ -507,37 +388,11 @@ namespace SSBatteryScaledDiffusionEqn
 
     assemble_system();
 
-    unsigned int       n_steps      = 0;
+    // unsigned int       n_steps      = 0;
     const unsigned int n_time_steps = 200;
     const double       initial_time = 0.;
     const double       final_time   = 10.;
-    // (frequency) omega = pi/10; sin(omega*t_final) = sin(pi) = 0
-
-    // Explicit methods have trouble with Q(3) elements. Hence commented out
-    /*
-     * std::cout << "Explicit methods:" << std::endl;
-     * explicit_method(TimeStepping::FORWARD_EULER,
-     *                 n_time_steps,
-     *                 initial_time,
-     *                 final_time);
-     * std::cout << "Forward Euler:            error=" << solution.l2_norm()
-     *           << std::endl;
-     *
-     * explicit_method(TimeStepping::RK_THIRD_ORDER,
-     *                 n_time_steps,
-     *                 initial_time,
-     *                 final_time);
-     * std::cout << "Third order Runge-Kutta:  error=" << solution.l2_norm()
-     *           << std::endl;
-     *
-     * explicit_method(TimeStepping::RK_CLASSIC_FOURTH_ORDER,
-     *                 n_time_steps,
-     *                 initial_time,
-     *                 final_time);
-     * std::cout << "Fourth order Runge-Kutta: error=" << solution.l2_norm()
-     *           << std::endl;
-     * std::cout << std::endl;
-     */
+    // Note that: (frequency) omega = pi/10; sin(omega*t_final) = sin(pi) = 0
 
     std::cout << "Implicit methods:" << std::endl;
     implicit_method(TimeStepping::BACKWARD_EULER,
@@ -568,50 +423,8 @@ namespace SSBatteryScaledDiffusionEqn
     std::cout << "SDIRK:                    error=" << solution.l2_norm()
               << std::endl;
     std::cout << std::endl;
-
-    std::cout << "Embedded explicit methods:" << std::endl;
-    n_steps = embedded_explicit_method(TimeStepping::HEUN_EULER,
-                                       n_time_steps,
-                                       initial_time,
-                                       final_time);
-    std::cout << "Heun-Euler:               error=" << solution.l2_norm()
-              << std::endl;
-    std::cout << "                steps performed=" << n_steps << std::endl;
-
-    n_steps = embedded_explicit_method(TimeStepping::BOGACKI_SHAMPINE,
-                                       n_time_steps,
-                                       initial_time,
-                                       final_time);
-    std::cout << "Bogacki-Shampine:         error=" << solution.l2_norm()
-              << std::endl;
-    std::cout << "                steps performed=" << n_steps << std::endl;
-
-    n_steps = embedded_explicit_method(TimeStepping::DOPRI,
-                                       n_time_steps,
-                                       initial_time,
-                                       final_time);
-    std::cout << "Dopri:                    error=" << solution.l2_norm()
-              << std::endl;
-    std::cout << "                steps performed=" << n_steps << std::endl;
-
-    n_steps = embedded_explicit_method(TimeStepping::FEHLBERG,
-                                       n_time_steps,
-                                       initial_time,
-                                       final_time);
-    std::cout << "Fehlberg:                 error=" << solution.l2_norm()
-              << std::endl;
-    std::cout << "                steps performed=" << n_steps << std::endl;
-
-    n_steps = embedded_explicit_method(TimeStepping::CASH_KARP,
-                                       n_time_steps,
-                                       initial_time,
-                                       final_time);
-    std::cout << "Cash-Karp:                error=" << solution.l2_norm()
-              << std::endl;
-    std::cout << "                steps performed=" << n_steps << std::endl;
   }
 } // namespace SSBatteryScaledDiffusionEqn
-
 
 
 int main()
