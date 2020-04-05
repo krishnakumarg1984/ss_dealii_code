@@ -1,0 +1,7 @@
+Sat  4 Apr 2020 22:42:49 BST
+
+Hey Krishna,
+
+I have verified the following points for you:
+- the current density in the electrolyte is constant = same as external applied current, not i_app/delec 
+- the local current density at the point delec is also constant = same as external ap

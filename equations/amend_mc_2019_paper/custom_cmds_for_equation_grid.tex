@@ -1,0 +1,53 @@
+% two counters for the keeping track of grid rows and columns
+\newcounter{GridEqnCol}[equation]
+\newcounter{GridEqnRow}
+\renewcommand\theGridEqnCol{(\theequation\alph{GridEqnCol})}
+\renewcommand\theGridEqnRow{\arabic{GridEqnRow}\alph{GridEqnCol}}
+\ExplSyntaxOn
+\int_new:N \l_grid_row_int   % grid row number
+\seq_new:N \l_grid_col_seq   % the column entries in one row
+\seq_new:N \l_grid_head_seq  % the optional column headers
+\seq_new:N \l_grid_row_seq   % the rows of the equation
+\tl_new:N  \l_grid_hline_tl  % a hack to adjust the columns
+\tl_new:N  \l_grid_label_tl  % for construction equation labels
+% \begin{equationgrid}[column headers as csv]{label}...\end{equationgrid}
+\NewDocumentEnvironment{equationgrid}{ o m b }{
+    % split the environment body into rows using the \\
+    \tl_clear:N \l_grid_hline_tl
+    \int_zero:N \l_grid_row_int
+    \setcounter{GridEqnRow}{0}
+    \tl_set:Nn \l_grid_label_tl {#2-}
+    \seq_set_split:Nnn \l_grid_row_seq { \\ } { #3 }
+    \IfNoValueTF{#1}{ \seq_clear:N \l_grid_head_seq }
+    {
+      \seq_set_split:Nnn \l_grid_head_seq {,} {#1}
+      \tl_put_right:Nx \l_grid_hline_tl {
+          \noexpand\cline{1-\int_eval:n{2+4*\seq_count:N \l_grid_head_seq} }
+      }
+    }
+    \begin{align*}
+      \seq_if_empty:NF \l_grid_head_seq {
+         \seq_map_function:NN \l_grid_head_seq \__grid_head:n
+         \\\tl_use:N \l_grid_hline_tl
+      }
+      \seq_map_inline:Nn \l_grid_row_seq { \__grid_row:n {##1} }
+    \end{align*}
+}{}
+% typeset an entry of the header row
+\cs_new:Npn \__grid_head:n #1 { \multispan{2}{\textbf{#1}} &&& }
+% typeset an equation row, adding equation numbers and references
+\cs_new:Npn \__grid_row:n #1 {
+  \refstepcounter{equation}
+  \refstepcounter{GridEqnRow}
+  % split #1 into column entries using the ,
+  \seq_set_split:Nnn \l_grid_col_seq { , } {#1}
+  \seq_map_inline:Nn \l_grid_col_seq {
+      \refstepcounter{GridEqnCol}
+      \tl_set:No \l_tmpa_tl {\tl_use:N \l_grid_label_tl \theGridEqnRow}
+      % align* disables equation numbers so need \ltx@label instead of \label
+      \use:c{ltx@label}{ \tl_use:N \l_tmpa_tl }
+      ##1 & \theGridEqnCol &&
+   }
+   \\
+}
+\ExplSyntaxOff

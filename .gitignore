@@ -1,6 +1,6 @@
 *tags
 *.spl
-*.pdf
+# *.pdf
 *.vtk
 *.vtu
 !compile_commands.json
@@ -289,3 +289,7 @@ TSWLatexianTemp*
 # Uncomment the next line to have this generated file ignored.
 #*Notes.bib
 
+**/*/solid_diffusion.pdf
+*.pvsm
+*.vtu
+*.vtk
