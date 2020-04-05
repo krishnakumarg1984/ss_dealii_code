@@ -60,7 +60,8 @@ namespace SSBatteryScaledDiffusionEqn
                                           const double          tau,
                                           const Vector<double> &y);
 
-    void output_results(const unsigned int               time_step,
+    void output_results(const double                     time,
+                        const unsigned int               time_step,
                         TimeStepping::runge_kutta_method method) const;
 
     void explicit_method(const TimeStepping::runge_kutta_method method,
@@ -293,6 +294,7 @@ namespace SSBatteryScaledDiffusionEqn
 
   template <int dim>
   void SolidDiffusion<dim>::output_results(
+    const double                     time,
     const unsigned int               time_step,
     TimeStepping::runge_kutta_method method) const
   {
@@ -356,6 +358,8 @@ namespace SSBatteryScaledDiffusionEqn
 
     data_out.build_patches();
 
+    data_out.set_flags(DataOutBase::VtkFlags(time, time_step));
+
     const std::string filename = "solution-" + method_name + "-" +
                                  Utilities::int_to_string(time_step, 3) +
                                  ".vtu";
@@ -379,7 +383,7 @@ namespace SSBatteryScaledDiffusionEqn
 
     TimeStepping::ExplicitRungeKutta<Vector<double>> explicit_runge_kutta(
       method);
-    output_results(0, method);
+    output_results(time, 0, method);
     for (unsigned int i = 0; i < n_time_steps; ++i)
       {
         time = explicit_runge_kutta.evolve_one_time_step(
@@ -393,7 +397,7 @@ namespace SSBatteryScaledDiffusionEqn
         constraint_matrix.distribute(solution);
 
         if ((i + 1) % 10 == 0)
-          output_results(i + 1, method);
+          output_results(time, i + 1, method);
       }
   }
 
@@ -414,7 +418,7 @@ namespace SSBatteryScaledDiffusionEqn
 
     TimeStepping::ImplicitRungeKutta<Vector<double>> implicit_runge_kutta(
       method);
-    output_results(0, method);
+    output_results(time, 0, method);
     for (unsigned int i = 0; i < n_time_steps; ++i)
       {
         time = implicit_runge_kutta.evolve_one_time_step(
@@ -431,7 +435,7 @@ namespace SSBatteryScaledDiffusionEqn
         constraint_matrix.distribute(solution);
 
         if ((i + 1) % 10 == 0)
-          output_results(i + 1, method);
+          output_results(time, i + 1, method);
       }
   }
 
@@ -464,7 +468,7 @@ namespace SSBatteryScaledDiffusionEqn
                                     max_delta,
                                     refine_tol,
                                     coarsen_tol);
-    output_results(0, method);
+    output_results(time, 0, method);
 
     unsigned int n_steps = 0;
     while (time < final_time)
@@ -483,7 +487,7 @@ namespace SSBatteryScaledDiffusionEqn
         constraint_matrix.distribute(solution);
 
         if ((n_steps + 1) % 10 == 0)
-          output_results(n_steps + 1, method);
+          output_results(time, n_steps + 1, method);
 
         time_step = embedded_explicit_runge_kutta.get_status().delta_t_guess;
         ++n_steps;
