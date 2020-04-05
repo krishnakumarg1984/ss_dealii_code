@@ -16,17 +16,6 @@
 
 \begin{document}
 
-\begin{alignat}{4}
-    \sigma_\mathrm{Li^+}\diff[2]{\phi_\text{el}}{x} &= 0\, (\because \diff{\bm{i}}{x}=0),  &\qquad \phi_\text{el,neg}(0) &= \frac{2 R_\text{gas} T}{F} \sinh^{-1}\bigg(\frac{\bm{i}}{2 \bm{i_\text{0,neg}}}\bigg); &&\  \sigma_\mathrm{Li^+}\diff{\phi_\text{el}}{x}{d_\text{elec}} &&= \bm{i_\text{pulse}} \\
-    \si{\siemens\per\metre}\frac{\si{\volt}}{\si{\meter\squared}} &= \frac{\si{\ampere\per\meter\squared}}{\si{\meter}}, &\quad \text{See}~\eqref{eq:phielnegcc_dimcheck}; &&\ \si{\siemens\per\meter}\frac{\si{\volt}}{\si{\meter}} &= \frac{\si{\ampere}}{\si{\meter\squared}} \\
-    \si{\ampere\per\volt}\frac{\si{\volt}}{\si{\meter\cubed}} &= \frac{\si{\ampere}}{\si{\meter\cubed}}, &\quad \text{See}~\eqref{eq:phielnegcc_dimcheck}; &&\ \si{\ampere\per\volt}\frac{\si{\volt}}{\si{\meter\squared}} &= \frac{\si{\ampere}}{\si{\meter\squared}} \\
-    \frac{\si{\ampere}}{\si{\meter\cubed}} &= \frac{\si{\ampere}}{\si{\meter\cubed}}, &\quad \text{See}~\eqref{eq:phielnegcc_dimcheck}; &&\ \frac{\si{\ampere}}{\si{\meter\squared}} &= \frac{\si{\ampere}}{\si{\meter\squared}} \\
-\end{alignat}
-
-It is clear that \(\bm{i} = \bm{i_\text{pulse}}\, (\si{\ampere\per\meter\squared})\). I do not understand the need for the bold symbol.
-
-\bigskip
-
 At negative current collector interface,
 \begin{align}
     \bm{i}                                                                            & = -\bm{i_\text{0,neg}}\Bigg[\exp\bigg(\frac{0.5 F \eta_\text{neg}}{R_\text{gas} T}\bigg) - \exp\bigg(\frac{-0.5 F \eta_\text{neg}}{R_\text{gas} T}\bigg)\Bigg] \\
@@ -39,5 +28,31 @@ At negative current collector interface,
     \frac{\si{\joule \per \kelvin \per \mole} \times \si{\kelvin}}{\si{\coulomb\per\mole}} & = \si{\volt} \\
     \frac{\si{\joule}  }{\si{\coulomb}}& = \si{\volt} \quad \checkmark \label{eq:phielnegcc_dimcheck}
 \end{align}
+
+\medskip
+\hrule
+
+\begin{alignat}{4}
+    \sigma_\mathrm{Li^+}\diff[2]{\phi_\text{el}}{x} &= 0\, (\because \diff{\bm{i}}{x}=0),  &\qquad \phi_\text{el,neg}(0) &= \frac{2 R_\text{gas} T}{F} \sinh^{-1}\bigg(\frac{\bm{i}}{2 \bm{i_\text{0,neg}}}\bigg); &&\  \sigma_\mathrm{Li^+}\diff{\phi_\text{el}}{x}{d_\text{elec}} &&= \bm{i_\text{pulse}} \\
+    \si{\siemens\per\metre}\frac{\si{\volt}}{\si{\meter\squared}} &= \frac{\si{\ampere\per\meter\squared}}{\si{\meter}}, &\quad \text{See}~\eqref{eq:phielnegcc_dimcheck}; &&\ \si{\siemens\per\meter}\frac{\si{\volt}}{\si{\meter}} &= \frac{\si{\ampere}}{\si{\meter\squared}} \\
+    \si{\ampere\per\volt}\frac{\si{\volt}}{\si{\meter\cubed}} &= \frac{\si{\ampere}}{\si{\meter\cubed}}, &\quad \text{See}~\eqref{eq:phielnegcc_dimcheck}; &&\ \si{\ampere\per\volt}\frac{\si{\volt}}{\si{\meter\squared}} &= \frac{\si{\ampere}}{\si{\meter\squared}} \\
+    \frac{\si{\ampere}}{\si{\meter\cubed}} &= \frac{\si{\ampere}}{\si{\meter\cubed}}, &\quad \text{See}~\eqref{eq:phielnegcc_dimcheck}; &&\ \frac{\si{\ampere}}{\si{\meter\squared}} &= \frac{\si{\ampere}}{\si{\meter\squared}} \\
+\end{alignat}
+
+It is clear that \(\bm{i} = \bm{i_\text{pulse}}\, (\si{\ampere\per\meter\squared})\). I do not understand the need for the bold symbol.
+
+\medskip
+\hrule
+
+\bigskip
+
+Solid Diffusion PDE (to do)
+% \begin{alignat}{4}
+%     \diffp{c_\text{Li}}{t} &= \\, (\because \diff{\bm{i}}{x}=0),  &\qquad c_\text{el,neg}(0) &= \frac{2 R_\text{gas} T}{F} \sinh^{-1}\bigg(\frac{\bm{i}}{2 \bm{i_\text{0,neg}}}\bigg); &&\  \sigma_\mathrm{Li^+}\diff{c_\text{Li}}{x}{d_\text{elec}} &&= \bm{i_\text{pulse}} \\
+%     \si{\siemens\per\metre}\frac{\si{\volt}}{\si{\meter\squared}} &= \frac{\si{\ampere\per\meter\squared}}{\si{\meter}}, &\quad \text{See}~\eqref{eq:phielnegcc_dimcheck}; &&\ \si{\siemens\per\meter}\frac{\si{\volt}}{\si{\meter}} &= \frac{\si{\ampere}}{\si{\meter\squared}} \\
+%     \si{\ampere\per\volt}\frac{\si{\volt}}{\si{\meter\cubed}} &= \frac{\si{\ampere}}{\si{\meter\cubed}}, &\quad \text{See}~\eqref{eq:phielnegcc_dimcheck}; &&\ \si{\ampere\per\volt}\frac{\si{\volt}}{\si{\meter\squared}} &= \frac{\si{\ampere}}{\si{\meter\squared}} \\
+%     \frac{\si{\ampere}}{\si{\meter\cubed}} &= \frac{\si{\ampere}}{\si{\meter\cubed}}, &\quad \text{See}~\eqref{eq:phielnegcc_dimcheck}; &&\ \frac{\si{\ampere}}{\si{\meter\squared}} &= \frac{\si{\ampere}}{\si{\meter\squared}} \\
+% \end{alignat}
+
 
 \end{document}

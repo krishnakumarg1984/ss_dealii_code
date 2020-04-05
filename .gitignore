@@ -289,7 +289,8 @@ TSWLatexianTemp*
 # Uncomment the next line to have this generated file ignored.
 #*Notes.bib
 
-**/*/solid_diffusion.pdf
+**/solid_diffusion.pdf
+**/main.pdf
 *.pvsm
 *.vtu
 *.vtk
