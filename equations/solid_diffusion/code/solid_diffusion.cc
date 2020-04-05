@@ -298,7 +298,8 @@ namespace SSBatteryScaledDiffusionEqn
     const unsigned int               time_step,
     TimeStepping::runge_kutta_method method) const
   {
-    std::string method_name;
+    std::string        method_name;
+    static std::string method_name_prev = "";
 
     switch (method)
       {
@@ -354,17 +355,32 @@ namespace SSBatteryScaledDiffusionEqn
     DataOut<dim> data_out;
 
     data_out.attach_dof_handler(dof_handler);
-    data_out.add_data_vector(solution, "solution");
-
+    std::string solution_name = "solution_" + method_name;
+    data_out.add_data_vector(solution, solution_name);
     data_out.build_patches();
 
     data_out.set_flags(DataOutBase::VtkFlags(time, time_step));
 
-    const std::string filename = "solution-" + method_name + "-" +
-                                 Utilities::int_to_string(time_step, 3) +
-                                 ".vtu";
+    const std::string filename =
+      solution_name + Utilities::int_to_string(time_step, 3) + ".vtu";
     std::ofstream output(filename);
     data_out.write_vtu(output);
+
+    static std::vector<std::pair<double, std::string>> times_and_names;
+
+    if (method_name_prev != method_name)
+      {
+        std::cout << "Starting a new method" << std::endl;
+        times_and_names.clear();
+      }
+
+    method_name_prev = method_name;
+
+    times_and_names.push_back(std::pair<double, std::string>(time, filename));
+
+    const std::string pvd_filename = "solution_" + method_name + ".pvd";
+    std::ofstream     pvd_output(pvd_filename);
+    DataOutBase::write_pvd_record(pvd_output, times_and_names);
   }
 
   template <int dim>
@@ -511,7 +527,7 @@ namespace SSBatteryScaledDiffusionEqn
     const unsigned int n_time_steps = 200;
     const double       initial_time = 0.;
     const double       final_time   = 10.;
-    // (frequency) omega = pi/10; sin(omega*t_final) = sin(pi) = 0
+    // Note that: (frequency) omega = pi/10; sin(omega*t_final) = sin(pi) = 0
 
     // Explicit methods have trouble with Q(3) elements. Hence commented out
     /*
