@@ -56,23 +56,9 @@ namespace SSBatteryScaledDiffusionEqn
     Vector<double> evaluate_diffusion(const double          time,
                                       const Vector<double> &y) const;
 
-    Vector<double> id_minus_tau_J_inverse(const double          time,
-                                          const double          tau,
-                                          const Vector<double> &y);
-
     void output_results(const double                     time,
                         const unsigned int               time_step,
                         TimeStepping::runge_kutta_method method) const;
-
-    void explicit_method(const TimeStepping::runge_kutta_method method,
-                         const unsigned int                     n_time_steps,
-                         const double                           initial_time,
-                         const double                           final_time);
-
-    void implicit_method(const TimeStepping::runge_kutta_method method,
-                         const unsigned int                     n_time_steps,
-                         const double                           initial_time,
-                         const double                           final_time);
 
     unsigned int
     embedded_explicit_method(const TimeStepping::runge_kutta_method method,
@@ -97,7 +83,6 @@ namespace SSBatteryScaledDiffusionEqn
 
     SparseMatrix<double> system_matrix; // - \mathcal{D} - \mathcal{A}
     SparseMatrix<double> mass_matrix;
-    SparseMatrix<double> mass_minus_tau_Jacobian;
 
     SparseDirectUMFPACK inverse_mass_matrix;
 
@@ -120,7 +105,7 @@ namespace SSBatteryScaledDiffusionEqn
   {
     dof_handler.distribute_dofs(fe);
 
-    // for dirichelet BCs at boundary_id = 0 (left boundary in 1D)
+    // for dirichelet BCs at boundary_id = 0 (i.e. the left boundary in 1D)
     VectorTools::interpolate_boundary_values(dof_handler,
                                              0,
                                              Functions::ZeroFunction<dim>(),
@@ -133,7 +118,6 @@ namespace SSBatteryScaledDiffusionEqn
 
     system_matrix.reinit(sparsity_pattern);
     mass_matrix.reinit(sparsity_pattern);
-    mass_minus_tau_Jacobian.reinit(sparsity_pattern);
     solution.reinit(dof_handler.n_dofs());
   }
 
@@ -172,8 +156,8 @@ namespace SSBatteryScaledDiffusionEqn
               {
                 cell_matrix(i, j) +=
                   ((-diffusion_coefficient *                // (-D
-                      fe_values.shape_grad(i, q_point) *    //  * grad phi_i
-                      fe_values.shape_grad(j, q_point)      //  * grad phi_j
+                      fe_values.shape_grad(i, q_point) *    //  * ∇ phi_i
+                      fe_values.shape_grad(j, q_point)      //  * ∇ phi_j
                     - absorption_cross_section *            //  -Sigma
                         fe_values.shape_value(i, q_point) * //  * phi_i
                         fe_values.shape_value(j, q_point))  //  * phi_j)
@@ -259,6 +243,7 @@ namespace SSBatteryScaledDiffusionEqn
 
         cell->get_dof_indices(local_dof_indices);
 
+        // tmp+=S(t); i.e. (-D - A)y + S(t)
         constraint_matrix.distribute_local_to_global(cell_source,
                                                      local_dof_indices,
                                                      tmp);
@@ -269,28 +254,6 @@ namespace SSBatteryScaledDiffusionEqn
     return value; // value contains -M^-1 * (-Dy - Ay + S)
   }
 
-  template <int dim>
-  Vector<double>
-  SolidDiffusion<dim>::id_minus_tau_J_inverse(const double /*time*/,
-                                              const double          tau,
-                                              const Vector<double> &y)
-  {
-    SparseDirectUMFPACK inverse_mass_minus_tau_Jacobian;
-
-    mass_minus_tau_Jacobian.copy_from(mass_matrix);
-    mass_minus_tau_Jacobian.add(-tau, system_matrix);
-
-    inverse_mass_minus_tau_Jacobian.initialize(mass_minus_tau_Jacobian);
-
-    Vector<double> tmp(dof_handler.n_dofs());
-    mass_matrix.vmult(tmp, y);
-
-    Vector<double> result(y);
-    inverse_mass_minus_tau_Jacobian.vmult(result, tmp);
-
-    return result;
-  }
-
 
   template <int dim>
   void SolidDiffusion<dim>::output_results(
@@ -298,56 +261,18 @@ namespace SSBatteryScaledDiffusionEqn
     const unsigned int               time_step,
     TimeStepping::runge_kutta_method method) const
   {
-    std::string        method_name;
-    static std::string method_name_prev = "";
+    std::string method_name;
 
     switch (method)
       {
-          case TimeStepping::FORWARD_EULER: {
-            method_name = "forward_euler";
-            break;
-          }
-          case TimeStepping::RK_THIRD_ORDER: {
-            method_name = "rk3";
-            break;
-          }
-          case TimeStepping::RK_CLASSIC_FOURTH_ORDER: {
-            method_name = "rk4";
-            break;
-          }
-          case TimeStepping::BACKWARD_EULER: {
-            method_name = "backward_euler";
-            break;
-          }
-          case TimeStepping::IMPLICIT_MIDPOINT: {
-            method_name = "implicit_midpoint";
-            break;
-          }
-          case TimeStepping::SDIRK_TWO_STAGES: {
-            method_name = "sdirk";
-            break;
-          }
-          case TimeStepping::HEUN_EULER: {
-            method_name = "heun_euler";
-            break;
-          }
-          case TimeStepping::BOGACKI_SHAMPINE: {
-            method_name = "bocacki_shampine";
-            break;
-          }
           case TimeStepping::DOPRI: {
             method_name = "dopri";
             break;
           }
-          case TimeStepping::FEHLBERG: {
-            method_name = "fehlberg";
-            break;
-          }
-          case TimeStepping::CASH_KARP: {
-            method_name = "cash_karp";
-            break;
-          }
           default: {
+            std::cout
+              << "This time-stepping method is not implemented. Exiting ..."
+              << std::endl;
             break;
           }
       }
@@ -368,91 +293,11 @@ namespace SSBatteryScaledDiffusionEqn
 
     static std::vector<std::pair<double, std::string>> times_and_names;
 
-    if (method_name_prev != method_name)
-      {
-        std::cout << "Starting a new method" << std::endl;
-        times_and_names.clear();
-      }
-
-    method_name_prev = method_name;
-
     times_and_names.push_back(std::pair<double, std::string>(time, filename));
 
     const std::string pvd_filename = "solution_" + method_name + ".pvd";
     std::ofstream     pvd_output(pvd_filename);
     DataOutBase::write_pvd_record(pvd_output, times_and_names);
-  }
-
-  template <int dim>
-  void SolidDiffusion<dim>::explicit_method(
-    const TimeStepping::runge_kutta_method method,
-    const unsigned int                     n_time_steps,
-    const double                           initial_time,
-    const double                           final_time)
-  {
-    const double time_step =
-      (final_time - initial_time) / static_cast<double>(n_time_steps);
-    double time = initial_time;
-
-    solution = 0.;
-    constraint_matrix.distribute(solution);
-
-    TimeStepping::ExplicitRungeKutta<Vector<double>> explicit_runge_kutta(
-      method);
-    output_results(time, 0, method);
-    for (unsigned int i = 0; i < n_time_steps; ++i)
-      {
-        time = explicit_runge_kutta.evolve_one_time_step(
-          [this](const double time, const Vector<double> &y) {
-            return this->evaluate_diffusion(time, y);
-          },
-          time,
-          time_step,
-          solution);
-
-        constraint_matrix.distribute(solution);
-
-        if ((i + 1) % 10 == 0)
-          output_results(time, i + 1, method);
-      }
-  }
-
-
-  template <int dim>
-  void SolidDiffusion<dim>::implicit_method(
-    const TimeStepping::runge_kutta_method method,
-    const unsigned int                     n_time_steps,
-    const double                           initial_time,
-    const double                           final_time)
-  {
-    const double time_step =
-      (final_time - initial_time) / static_cast<double>(n_time_steps);
-    double time = initial_time;
-
-    solution = 0.;
-    constraint_matrix.distribute(solution);
-
-    TimeStepping::ImplicitRungeKutta<Vector<double>> implicit_runge_kutta(
-      method);
-    output_results(time, 0, method);
-    for (unsigned int i = 0; i < n_time_steps; ++i)
-      {
-        time = implicit_runge_kutta.evolve_one_time_step(
-          [this](const double time, const Vector<double> &y) {
-            return this->evaluate_diffusion(time, y);
-          },
-          [this](const double time, const double tau, const Vector<double> &y) {
-            return this->id_minus_tau_J_inverse(time, tau, y);
-          },
-          time,
-          time_step,
-          solution);
-
-        constraint_matrix.distribute(solution);
-
-        if ((i + 1) % 10 == 0)
-          output_results(time, i + 1, method);
-      }
   }
 
 
@@ -516,8 +361,8 @@ namespace SSBatteryScaledDiffusionEqn
   template <int dim>
   void SolidDiffusion<dim>::run()
   {
-    GridGenerator::hyper_cube(triangulation, 0., 5.); // b = 5
-    triangulation.refine_global(6);
+    GridGenerator::hyper_cube(triangulation, 0., 5.); // b = 5 for now
+    triangulation.refine_global(6);                   // 2^6 = 64 nodes
 
     setup_system();
 
@@ -527,102 +372,14 @@ namespace SSBatteryScaledDiffusionEqn
     const unsigned int n_time_steps = 200;
     const double       initial_time = 0.;
     const double       final_time   = 10.;
-    // Note that: (frequency) omega = pi/10; sin(omega*t_final) = sin(pi) = 0
-
-    // Explicit methods have trouble with Q(3) elements. Hence commented out
-    /*
-     * std::cout << "Explicit methods:" << std::endl;
-     * explicit_method(TimeStepping::FORWARD_EULER,
-     *                 n_time_steps,
-     *                 initial_time,
-     *                 final_time);
-     * std::cout << "Forward Euler:            error=" << solution.l2_norm()
-     *           << std::endl;
-     *
-     * explicit_method(TimeStepping::RK_THIRD_ORDER,
-     *                 n_time_steps,
-     *                 initial_time,
-     *                 final_time);
-     * std::cout << "Third order Runge-Kutta:  error=" << solution.l2_norm()
-     *           << std::endl;
-     *
-     * explicit_method(TimeStepping::RK_CLASSIC_FOURTH_ORDER,
-     *                 n_time_steps,
-     *                 initial_time,
-     *                 final_time);
-     * std::cout << "Fourth order Runge-Kutta: error=" << solution.l2_norm()
-     *           << std::endl;
-     * std::cout << std::endl;
-     */
-
-    std::cout << "Implicit methods:" << std::endl;
-    implicit_method(TimeStepping::BACKWARD_EULER,
-                    n_time_steps,
-                    initial_time,
-                    final_time);
-    std::cout << "Backward Euler:           error=" << solution.l2_norm()
-              << std::endl;
-
-    implicit_method(TimeStepping::IMPLICIT_MIDPOINT,
-                    n_time_steps,
-                    initial_time,
-                    final_time);
-    std::cout << "Implicit Midpoint:        error=" << solution.l2_norm()
-              << std::endl;
-
-    implicit_method(TimeStepping::CRANK_NICOLSON,
-                    n_time_steps,
-                    initial_time,
-                    final_time);
-    std::cout << "Crank-Nicolson:           error=" << solution.l2_norm()
-              << std::endl;
-
-    implicit_method(TimeStepping::SDIRK_TWO_STAGES,
-                    n_time_steps,
-                    initial_time,
-                    final_time);
-    std::cout << "SDIRK:                    error=" << solution.l2_norm()
-              << std::endl;
-    std::cout << std::endl;
-
-    std::cout << "Embedded explicit methods:" << std::endl;
-    n_steps = embedded_explicit_method(TimeStepping::HEUN_EULER,
-                                       n_time_steps,
-                                       initial_time,
-                                       final_time);
-    std::cout << "Heun-Euler:               error=" << solution.l2_norm()
-              << std::endl;
-    std::cout << "                steps performed=" << n_steps << std::endl;
-
-    n_steps = embedded_explicit_method(TimeStepping::BOGACKI_SHAMPINE,
-                                       n_time_steps,
-                                       initial_time,
-                                       final_time);
-    std::cout << "Bogacki-Shampine:         error=" << solution.l2_norm()
-              << std::endl;
-    std::cout << "                steps performed=" << n_steps << std::endl;
+    // For the final_time above, note that the (frequency) omega = pi/10;
+    // sin(omega*t_final) = sin(pi) = 0
 
     n_steps = embedded_explicit_method(TimeStepping::DOPRI,
                                        n_time_steps,
                                        initial_time,
                                        final_time);
     std::cout << "Dopri:                    error=" << solution.l2_norm()
-              << std::endl;
-    std::cout << "                steps performed=" << n_steps << std::endl;
-
-    n_steps = embedded_explicit_method(TimeStepping::FEHLBERG,
-                                       n_time_steps,
-                                       initial_time,
-                                       final_time);
-    std::cout << "Fehlberg:                 error=" << solution.l2_norm()
-              << std::endl;
-    std::cout << "                steps performed=" << n_steps << std::endl;
-
-    n_steps = embedded_explicit_method(TimeStepping::CASH_KARP,
-                                       n_time_steps,
-                                       initial_time,
-                                       final_time);
-    std::cout << "Cash-Karp:                error=" << solution.l2_norm()
               << std::endl;
     std::cout << "                steps performed=" << n_steps << std::endl;
   }
