@@ -296,3 +296,6 @@ TSWLatexianTemp*
 *.vtk
 
 *.pvd
+
+*.cmake
+# equations/solid_diffusion/code/cmake_install 2.cmake
