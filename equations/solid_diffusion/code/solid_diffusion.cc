@@ -94,7 +94,8 @@ namespace SSBatteryScaledDiffusionEqn
 
     Vector<double> solution;
 
-    const bool mms_flag;
+    const bool   mms_flag;
+    const double b; // length of the hypercube domain in each dimension
   };
 
 
@@ -106,8 +107,9 @@ namespace SSBatteryScaledDiffusionEqn
     , fe(fe_degree)
     , dof_handler(triangulation)
     , mms_flag(true) // if true, will run the MMS method with preassumed
-                      // analytical solution (& hence, preassumed analytical
-                      // source term) in the equation
+                     // analytical solution (& hence, preassumed analytical
+                     // source term) in the equation
+    , b(5.0)
   {}
 
 
@@ -153,6 +155,11 @@ namespace SSBatteryScaledDiffusionEqn
     FullMatrix<double> cell_mass_matrix(dofs_per_cell, dofs_per_cell);
 
     std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
+    if (mms_flag == false)
+      {
+        solution = 0.0;
+        InitialCondition<dim> initial_condition;
+      }
 
     for (const auto &cell : dof_handler.active_cell_iterators())
       {
@@ -176,6 +183,12 @@ namespace SSBatteryScaledDiffusionEqn
                 cell_mass_matrix(i, j) += fe_values.shape_value(i, q_point) *
                                           fe_values.shape_value(j, q_point) *
                                           fe_values.JxW(q_point);
+
+                if (mms_flag == false)
+                  {
+                    const auto x_q = fe_values.quadrature_point(q_point);
+                    solution(i)    = initial_condition.value(x_q)
+                  }
               }
 
         cell->get_dof_indices(local_dof_indices);
@@ -213,6 +226,36 @@ namespace SSBatteryScaledDiffusionEqn
               std::sin(frequency * time));
   }
 
+  // This template function shall be called only if the MMS_flag is inactive
+  template <int dim>
+  class InitialCondition : public Function<dim>
+  {
+  public:
+    virtual double value(const Point<dim> &p,
+                         /* const double &     b, */
+                         const unsigned int component = 0) const override;
+  };
+
+  // Currently set up for only for 1D case. This is very problem-specific
+  template <int dim>
+  double InitialCondition<dim>::value(const Point<dim> &p,
+                                      /* const double &    b, */
+                                      const unsigned int /*component*/) const
+  {
+    const double b = 5.0;
+    return (4.0 * p(0) / b) * (1.0 - (p(0) / b));
+  }
+
+
+  // // Currently set up for only for 1D case. This is very problem-specific
+  // double initial_condition(const Triangulation<dim> &triangulation,
+  //                          Vector<double> &          u)
+  // {
+  //   for (auto &cell : triangulation.active_cell_iterators())
+  //     if (cell->center()[1] > 0)
+  //       cell->set_refine_flag();
+  //   u = triangulation.active_cell_iterators() return amplitude * std::sin(u);
+  // }
 
   // Ensure that the source S(t) is evaluated only when the MMS_flag is active
   template <int dim>
@@ -342,16 +385,16 @@ namespace SSBatteryScaledDiffusionEqn
     const double refine_tol    = 1e-1;
     const double coarsen_tol   = 1e-5;
 
-    // If MMS_flag is active with the carefully chosen S(t)
-    Assert(mms_flag, ExcNotImplemented("Non-MMS flag: Not implemented"));
+    // If MMS_flag is active, use the carefully chosen S(t)
+    /* Assert(mms_flag, ExcNotImplemented("Non-MMS flag: Not implemented")); */
     if (mms_flag)
       {
         solution = 0.;
       }
-    else
-      {
-        /* ExcNotImplemented("Non-MMS flag: Not implemented"); */
-      }
+    /* else */
+    /* { */
+    /* ExcNotImplemented("Non-MMS flag: Not implemented"); */
+    /* } */
     constraint_matrix.distribute(solution);
 
     TimeStepping::EmbeddedExplicitRungeKutta<Vector<double>>
@@ -394,8 +437,8 @@ namespace SSBatteryScaledDiffusionEqn
   template <int dim>
   void SolidDiffusion<dim>::run()
   {
-    GridGenerator::hyper_cube(triangulation, 0., 5.); // b = 5 for now
-    triangulation.refine_global(6);                   // 2^6 = 64 nodes
+    GridGenerator::hyper_cube(triangulation, 0., b); // b = 5 for now
+    triangulation.refine_global(6);                  // 2^6 = 64 nodes
 
     setup_system();
 
