@@ -108,8 +108,7 @@ namespace SSBatteryScaledDiffusionEqn
     , absorption_cross_section(1.)    // value of \Sigma_a
     , fe(fe_degree)
     , dof_handler(triangulation)
-    , mms_flag(false)
-    // , mms_flag(true) // if true, will run the MMS method with preassumed
+    , mms_flag(true) // if true, will run the MMS method with preassumed
     // analytical solution (& hence, preassumed analytical
     // source term) in the equation
     , b(5.0)
@@ -158,13 +157,11 @@ namespace SSBatteryScaledDiffusionEqn
     FullMatrix<double> cell_mass_matrix(dofs_per_cell, dofs_per_cell);
 
     std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
-    // if (mms_flag == false)
-    //   {
-    //     // solution = 0.0; // why? Maybe not reqd since <Vector> shall have 0
-    //     IC
-    //     // InitialCondition<dim> initial_condition;
-    //     InitialValues<dim> initial_condition;
-    //   }
+    /* if (mms_flag == false) */
+    /*   { */
+    /*     solution = 0.0; */
+    /*     InitialCondition<dim> initial_condition; */
+    /*   } */
 
     for (const auto &cell : dof_handler.active_cell_iterators())
       {
@@ -189,11 +186,11 @@ namespace SSBatteryScaledDiffusionEqn
                                           fe_values.shape_value(j, q_point) *
                                           fe_values.JxW(q_point);
 
-                // if (mms_flag == false)
-                //   {
-                //     const auto x_q = fe_values.quadrature_point(q_point);
-                //     solution(i)    = initial_condition.value(x_q)
-                //   }
+                /* if (mms_flag == false) */
+                /*   { */
+                /*     const auto x_q = fe_values.quadrature_point(q_point); */
+                /*     solution(i)    = initial_condition.value(x_q) */
+                /*   } */
               }
 
         cell->get_dof_indices(local_dof_indices);
@@ -231,8 +228,8 @@ namespace SSBatteryScaledDiffusionEqn
               std::sin(frequency * time));
   }
 
-  // This template function shall be called only if the MMS_flag is INACTIVE
-  // Currently set up for only for 1D case. This is highly problem-specific
+  // This template function shall be called only if the MMS_flag is inactive
+  // Currently set up for only for 1D case. This is very problem-specific
   template <int dim>
   class InitialValues : public Function<dim>
   {
@@ -245,6 +242,7 @@ namespace SSBatteryScaledDiffusionEqn
     {
       const double b = 5.0;
       return (4.0 * p(0) / b) * (1.0 - (p(0) / b));
+      /* return ExactSolution<dim>(1, this->get_time()).value(p, component); */
     }
   };
 
@@ -261,6 +259,7 @@ namespace SSBatteryScaledDiffusionEqn
     system_matrix.vmult(tmp, y);
 
     // Needs evaluation only if MMS_flag is active (non-zero pre-computed S(t))
+    Assert(mms_flag, ExcNotImplemented("Non-MMS: Not implemented"));
     if (mms_flag)
       {
         const QGauss<dim> quadrature_formula(fe_degree + 1);
@@ -303,11 +302,11 @@ namespace SSBatteryScaledDiffusionEqn
                                                          tmp);
           }
       }
-    // else
-    //   {
-    //     /* ExcNotImplemented( "Non-MMS run: The diffusion equation without
-    //      * source term has not yet been implemented"); */
-    //   }
+    else
+      {
+        /* ExcNotImplemented( "Non-MMS run: The diffusion equation without
+         * source term has not yet been implemented"); */
+      }
 
     Vector<double> value(dof_handler.n_dofs());
     inverse_mass_matrix.vmult(value, tmp);
@@ -341,6 +340,8 @@ namespace SSBatteryScaledDiffusionEqn
     DataOut<dim> data_out;
 
     data_out.attach_dof_handler(dof_handler);
+    // std::string solution_name = "solution_" + method_name;
+    // data_out.add_data_vector(solution, solution_name);
     data_out.add_data_vector(solution, "solution");
 
     data_out.build_patches();
@@ -386,10 +387,8 @@ namespace SSBatteryScaledDiffusionEqn
     const double refine_tol    = 1e-1;
     const double coarsen_tol   = 1e-5;
 
-    // solution = 0.; // This is suspect for a non-MMS simulation
     // If MMS_flag is active, use the carefully chosen S(t)
-    /* Assert(mms_flag, ExcNotImplemented("Non-MMS flag: Not implemented"));
-     */
+    /* Assert(mms_flag, ExcNotImplemented("Non-MMS flag: Not implemented")); */
     if (mms_flag)
       {
         solution = 0.;
@@ -441,7 +440,7 @@ namespace SSBatteryScaledDiffusionEqn
   void SolidDiffusion<dim>::run()
   {
     GridGenerator::hyper_cube(triangulation, 0., b); // b = 5 for now
-    triangulation.refine_global(4);
+    triangulation.refine_global(6);                  // 2^6 = 64 nodes
 
     setup_system();
     if (mms_flag == false)
@@ -449,8 +448,7 @@ namespace SSBatteryScaledDiffusionEqn
         VectorTools::project(dof_handler,
                              constraint_matrix,
                              QGauss<dim>(fe.degree + 1),
-                             // InitialValues<1>(1, time),
-                             InitialValues<dim>(1, 0),
+                             InitialValues<dim>(1, time),
                              solution);
       }
 
@@ -468,6 +466,7 @@ namespace SSBatteryScaledDiffusionEqn
                                        initial_time,
                                        final_time);
     // In this context, the error is valid only if the MMS_flag is active
+    Assert(mms_flag, ExcNotImplemented("Non-MMS: Not implemented"));
     if (mms_flag)
       {
         std::cout << "   Dopri:                    error=" << solution.l2_norm()
