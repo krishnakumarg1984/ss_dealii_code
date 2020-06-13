@@ -108,7 +108,8 @@ namespace SSBatteryScaledDiffusionEqn
     , absorption_cross_section(1.)    // value of \Sigma_a
     , fe(fe_degree)
     , dof_handler(triangulation)
-    , mms_flag(true) // if true, will run the MMS method with preassumed
+    , mms_flag(false)
+    // , mms_flag(true) // if true, will run the MMS method with preassumed
     // analytical solution (& hence, preassumed analytical
     // source term) in the equation
     , b(5.0)
@@ -157,11 +158,13 @@ namespace SSBatteryScaledDiffusionEqn
     FullMatrix<double> cell_mass_matrix(dofs_per_cell, dofs_per_cell);
 
     std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
-    /* if (mms_flag == false) */
-    /*   { */
-    /*     solution = 0.0; */
-    /*     InitialCondition<dim> initial_condition; */
-    /*   } */
+    // if (mms_flag == false)
+    //   {
+    //     // solution = 0.0; // why? Maybe not reqd since <Vector> shall have 0
+    //     IC
+    //     // InitialCondition<dim> initial_condition;
+    //     InitialValues<dim> initial_condition;
+    //   }
 
     for (const auto &cell : dof_handler.active_cell_iterators())
       {
@@ -186,11 +189,11 @@ namespace SSBatteryScaledDiffusionEqn
                                           fe_values.shape_value(j, q_point) *
                                           fe_values.JxW(q_point);
 
-                /* if (mms_flag == false) */
-                /*   { */
-                /*     const auto x_q = fe_values.quadrature_point(q_point); */
-                /*     solution(i)    = initial_condition.value(x_q) */
-                /*   } */
+                // if (mms_flag == false)
+                //   {
+                //     const auto x_q = fe_values.quadrature_point(q_point);
+                //     solution(i)    = initial_condition.value(x_q)
+                //   }
               }
 
         cell->get_dof_indices(local_dof_indices);
@@ -228,8 +231,8 @@ namespace SSBatteryScaledDiffusionEqn
               std::sin(frequency * time));
   }
 
-  // This template function shall be called only if the MMS_flag is inactive
-  // Currently set up for only for 1D case. This is very problem-specific
+  // This template function shall be called only if the MMS_flag is INACTIVE
+  // Currently set up for only for 1D case. This is highly problem-specific
   template <int dim>
   class InitialValues : public Function<dim>
   {
@@ -258,7 +261,6 @@ namespace SSBatteryScaledDiffusionEqn
     system_matrix.vmult(tmp, y);
 
     // Needs evaluation only if MMS_flag is active (non-zero pre-computed S(t))
-    Assert(mms_flag, ExcNotImplemented("Non-MMS: Not implemented"));
     if (mms_flag)
       {
         const QGauss<dim> quadrature_formula(fe_degree + 1);
@@ -301,11 +303,11 @@ namespace SSBatteryScaledDiffusionEqn
                                                          tmp);
           }
       }
-    else
-      {
-        /* ExcNotImplemented( "Non-MMS run: The diffusion equation without
-         * source term has not yet been implemented"); */
-      }
+    // else
+    //   {
+    //     /* ExcNotImplemented( "Non-MMS run: The diffusion equation without
+    //      * source term has not yet been implemented"); */
+    //   }
 
     Vector<double> value(dof_handler.n_dofs());
     inverse_mass_matrix.vmult(value, tmp);
