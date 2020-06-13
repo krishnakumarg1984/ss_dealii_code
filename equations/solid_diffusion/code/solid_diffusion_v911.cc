@@ -51,8 +51,15 @@ namespace SSBatteryScaledDiffusionEqn
 
     void assemble_system();
 
+    // In the implementation of the below function, the get_source() function
+    // below needs to be evaluated only if the MMS_flag is true
     double get_source(const double time, const Point<dim> &point) const;
 
+
+    // Evaluate RHS of weak form of spatially discretised PDE (M^-1 (-Dy-Ay+S))
+
+    // In the implementation of the below function, the section/logic for S(t)
+    // from get_source() above need to be evaluated only if the MMS_flag is true
     Vector<double> evaluate_diffusion(const double          time,
                                       const Vector<double> &y) const;
 
@@ -65,6 +72,7 @@ namespace SSBatteryScaledDiffusionEqn
                              const unsigned int n_time_steps,
                              const double       initial_time,
                              const double       final_time);
+
 
     const unsigned int fe_degree;
 
@@ -81,22 +89,29 @@ namespace SSBatteryScaledDiffusionEqn
 
     SparsityPattern sparsity_pattern;
 
-    SparseMatrix<double> system_matrix;
+    SparseMatrix<double> system_matrix; // - \mathcal{D} - \mathcal{A}
     SparseMatrix<double> mass_matrix;
 
     SparseDirectUMFPACK inverse_mass_matrix;
 
     Vector<double> solution;
+
+    const bool   mms_flag;
+    const double b; // length of the hypercube domain in each dimension
   };
 
 
   template <int dim>
   SolidDiffusion<dim>::SolidDiffusion()
     : fe_degree(3)
-    , diffusion_coefficient(1. / 30.)
-    , absorption_cross_section(1.)
+    , diffusion_coefficient(1. / 30.) // value of D
+    , absorption_cross_section(1.)    // value of \Sigma_a
     , fe(fe_degree)
     , dof_handler(triangulation)
+    , mms_flag(true) // if true, will run the MMS method with preassumed
+    // analytical solution (& hence, preassumed analytical
+    // source term) in the equation
+    , b(5.0)
   {}
 
 
@@ -142,6 +157,11 @@ namespace SSBatteryScaledDiffusionEqn
     FullMatrix<double> cell_mass_matrix(dofs_per_cell, dofs_per_cell);
 
     std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
+    /* if (mms_flag == false) */
+    /*   { */
+    /*     solution = 0.0; */
+    /*     InitialCondition<dim> initial_condition; */
+    /*   } */
 
     for (const auto &cell : dof_handler.active_cell_iterators())
       {
@@ -165,6 +185,12 @@ namespace SSBatteryScaledDiffusionEqn
                 cell_mass_matrix(i, j) += fe_values.shape_value(i, q_point) *
                                           fe_values.shape_value(j, q_point) *
                                           fe_values.JxW(q_point);
+
+                /* if (mms_flag == false) */
+                /*   { */
+                /*     const auto x_q = fe_values.quadrature_point(q_point); */
+                /*     solution(i)    = initial_condition.value(x_q) */
+                /*   } */
               }
 
         cell->get_dof_indices(local_dof_indices);
@@ -180,14 +206,17 @@ namespace SSBatteryScaledDiffusionEqn
     inverse_mass_matrix.initialize(mass_matrix);
   }
 
+
+  // This template function shall be called only if the MMS_flag is active
   template <int dim>
   double SolidDiffusion<dim>::get_source(const double      time,
                                          const Point<dim> &point) const
   {
-    const double intensity = 10.;
-    const double frequency = numbers::PI / 10.;
-    const double b         = 5.;
-    const double x         = point(0);
+    const double intensity = 10.;               // A (amplitude)
+    const double frequency = numbers::PI / 10.; // omega
+    const double b = 5.; // length in each co-ordinate direction (repeated in
+    // GridGenerator::hyper_cube method)
+    const double x = point(0); // assign the x-coord of point to 'x'
 
     // A*((b^2 −2bx + x^2)􏰁ω x cos(ωt) +􏰀((b^2 −2bx + x^2)Σa x +
     // 2D(2b−3x))􏰁sin(ωt))
@@ -199,6 +228,8 @@ namespace SSBatteryScaledDiffusionEqn
               std::sin(frequency * time));
   }
 
+  // This template function shall be called only if the MMS_flag is inactive
+  // Currently set up for only for 1D case. This is very problem-specific
   template <int dim>
   class InitialValues : public Function<dim>
   {
@@ -211,9 +242,13 @@ namespace SSBatteryScaledDiffusionEqn
     {
       const double b = 5.0;
       return (4.0 * p(0) / b) * (1.0 - (p(0) / b));
+      /* return ExactSolution<dim>(1, this->get_time()).value(p, component); */
     }
   };
 
+
+
+  // Ensure that the source S(t) is evaluated only when the MMS_flag is active
   template <int dim>
   Vector<double>
   SolidDiffusion<dim>::evaluate_diffusion(const double          time,
@@ -223,48 +258,62 @@ namespace SSBatteryScaledDiffusionEqn
     tmp = 0.;
     system_matrix.vmult(tmp, y);
 
-    const QGauss<dim> quadrature_formula(fe_degree + 1);
-
-    FEValues<dim> fe_values(fe,
-                            quadrature_formula,
-                            update_values | update_quadrature_points |
-                              update_JxW_values);
-
-    const unsigned int dofs_per_cell = fe.dofs_per_cell;
-    const unsigned int n_q_points    = quadrature_formula.size();
-
-    Vector<double> cell_source(dofs_per_cell);
-
-    std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
-
-    for (const auto &cell : dof_handler.active_cell_iterators())
+    // Needs evaluation only if MMS_flag is active (non-zero pre-computed S(t))
+    Assert(mms_flag, ExcNotImplemented("Non-MMS: Not implemented"));
+    if (mms_flag)
       {
-        cell_source = 0.;
+        const QGauss<dim> quadrature_formula(fe_degree + 1);
 
-        fe_values.reinit(cell);
+        FEValues<dim> fe_values(fe,
+                                quadrature_formula,
+                                update_values | update_quadrature_points |
+                                  update_JxW_values);
 
-        for (unsigned int q_point = 0; q_point < n_q_points; ++q_point)
+
+        const unsigned int dofs_per_cell = fe.dofs_per_cell;
+        const unsigned int n_q_points    = quadrature_formula.size();
+
+        Vector<double> cell_source(dofs_per_cell);
+
+        std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
+
+        for (const auto &cell : dof_handler.active_cell_iterators())
           {
-            const double source =
-              get_source(time, fe_values.quadrature_point(q_point));
-            for (unsigned int i = 0; i < dofs_per_cell; ++i)
-              cell_source(i) += fe_values.shape_value(i, q_point) * // phi_i(x)
-                                source *                            // * S(x,t)
-                                fe_values.JxW(q_point);             // * dx
+            cell_source = 0.;
+
+            fe_values.reinit(cell);
+
+            for (unsigned int q_point = 0; q_point < n_q_points; ++q_point)
+              {
+                const double source =
+                  get_source(time, fe_values.quadrature_point(q_point));
+                for (unsigned int i = 0; i < dofs_per_cell; ++i)
+                  cell_source(i) +=
+                    fe_values.shape_value(i, q_point) * // phi_i(x)
+                    source *                            // * S(x,t)
+                    fe_values.JxW(q_point);             // * dx
+              }
+
+            cell->get_dof_indices(local_dof_indices);
+
+            // tmp+=S(t); i.e. (-D - A)y + S(t)
+            constraint_matrix.distribute_local_to_global(cell_source,
+                                                         local_dof_indices,
+                                                         tmp);
           }
-
-        cell->get_dof_indices(local_dof_indices);
-
-        constraint_matrix.distribute_local_to_global(cell_source,
-                                                     local_dof_indices,
-                                                     tmp);
+      }
+    else
+      {
+        /* ExcNotImplemented( "Non-MMS run: The diffusion equation without
+         * source term has not yet been implemented"); */
       }
 
     Vector<double> value(dof_handler.n_dofs());
     inverse_mass_matrix.vmult(value, tmp);
 
-    return value;
+    return value; // value contains -M^-1 * (-Dy - Ay + S)
   }
+
 
   template <int dim>
   void SolidDiffusion<dim>::output_results(
@@ -291,6 +340,8 @@ namespace SSBatteryScaledDiffusionEqn
     DataOut<dim> data_out;
 
     data_out.attach_dof_handler(dof_handler);
+    // std::string solution_name = "solution_" + method_name;
+    // data_out.add_data_vector(solution, solution_name);
     data_out.add_data_vector(solution, "solution");
 
     data_out.build_patches();
@@ -318,6 +369,7 @@ namespace SSBatteryScaledDiffusionEqn
     DataOutBase::write_pvd_record(pvd_output, times_and_names);
   }
 
+
   template <int dim>
   unsigned int SolidDiffusion<dim>::embedded_explicit_method(
     const TimeStepping::runge_kutta_method method,
@@ -335,7 +387,16 @@ namespace SSBatteryScaledDiffusionEqn
     const double refine_tol    = 1e-1;
     const double coarsen_tol   = 1e-5;
 
-    solution = 0.; // This is suspect for a non-MMS simulation
+    // If MMS_flag is active, use the carefully chosen S(t)
+    /* Assert(mms_flag, ExcNotImplemented("Non-MMS flag: Not implemented")); */
+    if (mms_flag)
+      {
+        solution = 0.;
+      }
+    /* else */
+    /* { */
+    /* ExcNotImplemented("Non-MMS flag: Not implemented"); */
+    /* } */
     constraint_matrix.distribute(solution);
 
     TimeStepping::EmbeddedExplicitRungeKutta<Vector<double>>
@@ -374,21 +435,22 @@ namespace SSBatteryScaledDiffusionEqn
     return n_steps;
   }
 
+
   template <int dim>
   void SolidDiffusion<dim>::run()
   {
-    GridGenerator::hyper_cube(triangulation, 0., 5.);
-    triangulation.refine_global(4);
+    GridGenerator::hyper_cube(triangulation, 0., b); // b = 5 for now
+    triangulation.refine_global(6);                  // 2^6 = 64 nodes
 
     setup_system();
-
-    VectorTools::project(dof_handler,
-                         constraint_matrix,
-                         QGauss<dim>(fe.degree + 1),
-                         // InitialValues<1>(1, time),
-                         InitialValues<dim>(1, 0),
-                         solution);
-
+    if (mms_flag == false)
+      {
+        VectorTools::project(dof_handler,
+                             constraint_matrix,
+                             QGauss<dim>(fe.degree + 1),
+                             InitialValues<dim>(1, time),
+                             solution);
+      }
 
     assemble_system();
 
@@ -396,16 +458,25 @@ namespace SSBatteryScaledDiffusionEqn
     const unsigned int n_time_steps = 200;
     const double       initial_time = 0.;
     const double       final_time   = 10.;
+    // For the final_time above, note that the (frequency) omega = pi/10;
+    // sin(omega*t_final) = sin(pi) = 0
 
     n_steps = embedded_explicit_method(TimeStepping::DOPRI,
                                        n_time_steps,
                                        initial_time,
                                        final_time);
-    std::cout << "   Dopri:                    error=" << solution.l2_norm()
-              << std::endl;
-    std::cout << "                steps performed=" << n_steps << std::endl;
+    // In this context, the error is valid only if the MMS_flag is active
+    Assert(mms_flag, ExcNotImplemented("Non-MMS: Not implemented"));
+    if (mms_flag)
+      {
+        std::cout << "   Dopri:                    error=" << solution.l2_norm()
+                  << std::endl;
+        std::cout << "                steps performed=" << n_steps << std::endl;
+      }
   }
 } // namespace SSBatteryScaledDiffusionEqn
+
+
 
 int main()
 {
