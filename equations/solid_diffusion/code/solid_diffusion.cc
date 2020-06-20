@@ -201,8 +201,9 @@ namespace SSBatteryScaledDiffusionEqn
   double
   SolidDiffusion<dim>::get_boundary_neumann_value(const double time) const
   {
-    return 0.0; // for now, hard-coding zero neumannBC value (for MMS
-                // checking etc.)
+    return 0.5; // for now, hard-coding some neumannBC value
+    // return 0.0; // for now, hard-coding zero neumannBC value (for MMS
+    // checking etc.)
   }
 
   // This template function shall be called (from within evaluate_diffusion()),
@@ -245,10 +246,16 @@ namespace SSBatteryScaledDiffusionEqn
       const double b         = 5.0;
       const double amplitude = 1.0;
 
-      // manually chosen initial condition spatial function
-      return amplitude * exp(-(8.0 * pow(x - 0.5 * b, 2) /
-                               b)); // Gaussian centred at half the domain
+      // try various manually chosen spatial function(s) for the IC
+
+      // Gaussian curve centred at half the domain
+      // return amplitude * exp(-(8.0 * pow(x - 0.5 * b, 2) / b));
+
+      // Gaussian curve centred at 1/3rd of the domain length
       // return amplitude * exp(-(2.0 * pow(x - 0.3 * b, 2) / b));
+
+      // Spatially constant IC
+      return amplitude;
     }
   };
 
@@ -315,8 +322,6 @@ namespace SSBatteryScaledDiffusionEqn
         // tmp+=NeumannBC; i.e. (-D - A)y + NeumannBC
         constraint_matrix.distribute_local_to_global(
           cell_neumannbc_contribution, local_dof_indices, tmp);
-        // This probably just closes the constaint matrix thereby
-        // rendering everything else below out of scope?
 
         // Evaluate only if MMS_flag is active (non-zero pre-computed S(t))
         if (mms_flag == true)
