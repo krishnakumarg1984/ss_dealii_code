@@ -50,14 +50,14 @@
     \begin{minipage}{0.480\columnwidth}
         \begin{alignat}{2}
             \diffp{u}{t} - \triangle u & = f  &\quad& \text{ in } \Omega \\
-            u & = g  &\quad& \text{ on } \partial\Omega 
+            u & = g  &\quad& \text{ on } \partial\Omega
         \end{alignat}
     \end{minipage}
     \hfill
     \begin{minipage}{0.480\columnwidth}
         \begin{alignat}{2}
             \diffp{u}{t} - \nabla \cdot \left(D\left(u\right) \nabla u\right) & = 0  &\quad& \text{ in } \Omega  \\
-            D(u) \diffp{u}{x}{0} = -\beta; & \quad   D(u) \diffp{u}{x}{1} = 0 
+            D(u) \diffp{u}{x}{0} = -\beta; & \quad   D(u) \diffp{u}{x}{1} = 0
         \end{alignat}
     \end{minipage}
 
@@ -75,7 +75,7 @@
             \begin{multlined}
                 \frac{u^n - u^{n-1}}{k_n} - D\left(u^\ast\right) \left(\left(1-\theta\right)u^{n-1} + \theta\, u^n\right) = 0, \quad  \\
                 \qquad\qquad D\left(u^\ast\right) = f(u^{n-k}), \ k = 1,2,\dots m
-            \end{multlined} 
+            \end{multlined}
         \end{alignat}
     \end{minipage}
 
@@ -91,14 +91,14 @@
 
     \begin{minipage}{0.480\columnwidth}
         \begin{equation}
-            M\frac{U^n - U^{n-1}}{k_n} + A \left(\left(1-\theta\right)U^{n-1} + \theta\, U^n\right) =  \left( 1-\theta \right) F^{n-1} + \theta F^n 
+            M\frac{U^n - U^{n-1}}{k_n} + A \left(\left(1-\theta\right)U^{n-1} + \theta\, U^n\right) =  \left( 1-\theta \right) F^{n-1} + \theta F^n
         \end{equation}
     \end{minipage}
     \hfill
     \begin{minipage}{0.4800\columnwidth}
         \begin{equation}
             M\frac{U^n - U^{n-1}}{k_n} + A D(u^*) \left(\left(1-\theta\right)U^{n-1} + \theta\, U^n\right) =  (w\cdot-\beta){\Huge\mid}_{x=0}
-        \end{equation} 
+        \end{equation}
     \end{minipage}
 
     \bigskip
@@ -113,7 +113,7 @@
     \begin{minipage}{0.515\columnwidth}
         \begin{equation}
             \left(M + k_n \theta D\left(u^\ast\right) A \right) U^n = \left(M - k_n D\left(u^\ast\right) A \left(1-\theta\right)\right) U^{n-1} + k_n(w\cdot-\beta){\Huge\mid}_{x=0}
-        \end{equation} 
+        \end{equation}
         \begin{equation}
             \left(M + k_n \theta D\left(u^\ast\right) A \right) U^n = \left(M - k_n D\left(u^\ast\right) A \left(1-\theta\right)\right) U^{n-1} + \,  {-k_n}\beta\ w\left(0\right)
         \end{equation}
@@ -146,7 +146,7 @@
         \end{align}
     \end{MyColorPar}
 
-    % Assume $u(\mathbf{x},t) = A \sin\left(\omega t\right)\big(b\, \mathbf{x} - \mathbf{x}^2\big)$. 
+    % Assume $u(\mathbf{x},t) = A \sin\left(\omega t\right)\big(b\, \mathbf{x} - \mathbf{x}^2\big)$.
     \begin{sagesilent}
         reset()
         var('x','t','omega','A','b','Sigma_a','D','u')
@@ -154,7 +154,7 @@
     \end{sagesilent}
     If we apply a Homogenous Neumann BC at the RHS, we need to have an analytical solution with a suitable form that facilities this.
     \begin{equation}
-        u(x,t) = \sage{u} 
+        u(x,t) = \sage{u}
     \end{equation}
     % $\diffp{u}{x} = \sage{diff(u,x)}$
     % \sage{(diff(phi,t) + (Sigma_a*phi - D*diff(phi,x,2)).collect(sin(omega*t))).collect_common_factors()}
@@ -198,11 +198,11 @@
     \begin{align}
         \int_\Omega \psi \nabla \cdot D \nabla u\, \mathrm{d}\Omega &= - \big(D U(t) \nabla \psi_i, \nabla \psi_j \big)_\Omega \label{eq:weak_form_diffusion_laplacian_2d_after_homogenous_bcs}\\
         \int_\Omega \psi \nabla \cdot D \nabla u\, \mathrm{d}\Omega &= - \big( D \nabla \psi_i, \nabla \psi_j \big)_\Omega U(t) \\
-        \int_\Omega \psi \nabla \cdot D \nabla u\, \mathrm{d}\Omega &= - \mathcal{D} U(t) 
+        \int_\Omega \psi \nabla \cdot D \nabla u\, \mathrm{d}\Omega &= - \mathcal{D} U(t)
     \end{align}
     The weak form of the problem \crefrange{eq:strong_form_pde}{eq:bc2_2d} is:
 
-    \begin{equation}
+    \begin{equation}\label{eq:systemeqn}
         M \diff{U(t)}{t} = -\mathcal{D} U(t) - \mathcal{A} U(t) + \mathcal{S}(t)
     \end{equation}
     where
@@ -214,7 +214,7 @@
     \end{align}
 
     \begin{MyColorPar}
-        The only change is to move to 1D. $\mathbf{x} = x,\, \Omega:x \in (0,b)$ whilst retaining a ``similar'' set of boundary conditions. 
+        The only change is to move to 1D. $\mathbf{x} = x,\, \Omega:x \in (0,b)$ whilst retaining a ``similar'' set of boundary conditions.
         So, splitting the boundary term in \cref{eq:weak_form_diffusion_laplacian},
         \begin{align}
             \int_\Omega \psi \nabla \cdot D \nabla u\, \mathrm{d}\Omega &= - \big(D U(t) \nabla \psi_i, \nabla \psi_j \big)_\Omega  +  \big(\psi_i \,, D \, \nabla u\cdot \mathbf{n}\big)_{x=0} + \big(\psi_i \,, D \, \nabla u\cdot \mathbf{n}\big)_{x=b} \label{eq:weak_form_diffusion_laplacianterm_1d_expanded_boundary_integrals}
@@ -227,46 +227,38 @@
 
 This was tested and works fine.
 
-    % \begin{minipage}{0.51\columnwidth}
-    %     \begin{center}
-    %         \underline{Original (MMS)}
-    %     \end{center}
-    %     \begin{align}
-    %         \!\!\!\diffp{u(x,t)}{t} &= \nabla\!\cdot\!D(x) \nabla u(x,t) - \Sigma_a(x) u(x,t) + S(x,t)   \text{ in } \Omega: (0,b) \times (0,b) \\
-    %         \diffp{u(x,t)}{t} &= \nabla \cdot D\, \nabla u(x,t) - \Sigma_a\, u(x,t) + S(x,t) \text{ in } \Omega: (0,b) \times (0,b) \\
-    %         \diffp{u(x,t)}{t} &= D\, \triangle u(x,t) - \Sigma_a\, u(x,t) + S(x,t) \text{ in } \Omega: (0,b) \times (0,b)
-    %         % \end{align}
-    %         \intertext{Assume $u(x,t) = A \sin\left(\omega t\right)\big(b x - x^2\big)$,}
-    %         % \begin{align}
-    %         u(0,t) &= 0\,; \ u(b,0) = 0 \\[1ex]
-    %         \diffp{u(x,t)}{x}{\mathrlap{x=0}} &= 0\,; \ \diffp{u(x,t)}{x}{\mathrlap{x=b}} = 0
-    %     \end{align}
-    %         \begin{sagesilent}
-    %             var('phi','x','t','omega','A','b','Sigma_a','D')
-    %             phi = A*sin(omega*t)*(b*x - x^2)
-    %         \end{sagesilent}
-    %         \begin{equation}
-    %             \sage{(diff(phi,t) + (Sigma_a*phi - D*diff(phi,x,2)).collect(sin(omega*t))).collect_common_factors()}
-    %         \end{equation}
-    %     \end{minipage}
-        % \hfill
-        % \begin{minipage}{0.475\columnwidth}
-        %     \begin{center}
-        %         \underline{Modification from Original (MMS)}
-        %     \end{center}
-        %     \raggedright
-        %     \begin{align}
-        %         \!\!\!\diffp{u(x,t)}{t} &= \nabla\!\cdot\!D(x) \nabla u(x,t) + S(x,t)  \text{ in } \Omega: (0,b),\, b = 1\\
-        %         \diffp{u(x,t)}{t} &= \nabla \cdot D\, \nabla u(x,t) + S(x,t)   \text{ in } \Omega: (0,b),\, b = 1\\
-        %         \diffp{u(x,t)}{t} &= D\, \triangle u(x,t) + S(x,t)  \text{ in } \Omega: (0,b),\, b = 1\\
-        %         \intertext{Assume $u(x,t) = A \sin\left(\omega t\right)\big(b x - x^2\big),\, b=1$,}
-        %         % \begin{align}
-        %         \vphantom{u(0,t) = 0\,; \ u(b,0) = 0,\ b =1} \notag\\[1ex]
-        %         \diffp{u(x,t)}{x}{\mathrlap{x=0}} &= -\beta\,; \ \diffp{u(x,t)}{x}{\mathrlap{\substack{x=b,\\b=1}}} = 0
-        %     \end{align}
-        %     \begin{equation}
-        %         \sage{((diff(phi,t) - D*diff(phi,x,2)).collect_common_factors()).subs(b==1)}
-        %     \end{equation}
-        % \end{minipage}
+Update on 2020-06-14. Now, we try imposing a non-homogenous neumann BC at the left boundary and a homogenous neumann BC at the right boundary. So \cref{eq:weak_form_diffusion_laplacianterm_1d_expanded_boundary_integrals} becomes
+
+\begin{MyColorPar}
+    \begin{align}
+        \int_\Omega \psi \nabla \cdot D \nabla u\, \mathrm{d}\Omega &= - \big(D U(t) \nabla \psi_i, \nabla \psi_j \big)_\Omega  +  \big(\psi_i \,, D \, \nabla u\cdot \mathbf{n}\big)_{x=0} + \big(\psi_i \,, \cancelto{0}{D \, \nabla u\cdot \mathbf{n}}\big)_{x=b} \\
+        \int_\Omega \psi \nabla \cdot D \nabla u\, \mathrm{d}\Omega &= - \big(D U(t) \nabla \psi_i, \nabla \psi_j \big)_\Omega  +  \big(\psi_i \,,\beta(t))_{x=0} \\
+            \int_\Omega \psi \nabla \cdot D \nabla u\, \mathrm{d}\Omega &= - \big(D U(t) \nabla \psi_i, \nabla \psi_j \big)_\Omega  +  \beta(t)\, \psi_i(0)
+    \end{align}
+Everything else remains the same in the equations. Therefore, in the spatially discretised (but remember, continuous in time) weak form of the PDE, the RHS of \cref{eq:systemeqn} will just have one additional term as shown below
+
+\begin{equation}\label{eq:systemeqnwithneumannbc}
+        M \diff{U(t)}{t} = -\mathcal{D} U(t) - \mathcal{A} U(t) + \mathcal{S}(t) + \beta(t)\, \psi_i(0)
+\end{equation}
+
+with $\mathcal{D}, \mathcal{A} \text{ and } \mathcal{S}$ retaining their present mathematical definitions. Furthermore, in the C++ code, the Dirichelet BC interpolation lines of code need to be taken out.
+
+\begin{sagesilent}
+    reset()
+    var('x','t','omega','A','b','Sigma_a','D','u')
+    u = A*sin(omega*t)*exp(-8*((x-b/2)^2)/b)
+\end{sagesilent}
+For verification through the MMS method, let us assume the following analytical solution
+\begin{equation}
+    u(x,t) = \sage{u}
+\end{equation}
+
+When using the Method of Manufactured Solutions (MMS) with the above assumed $u(\mathbf{x},t)$, the source term is
+\begin{equation}
+    S(x,t) = \sage{(diff(u,t) + (Sigma_a*u - D*diff(u,x,2)).collect_common_factors()).collect_common_factors()}
+\end{equation}
+
+\end{MyColorPar}
+
 
 \end{document}

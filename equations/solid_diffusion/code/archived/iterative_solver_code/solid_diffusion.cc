@@ -236,7 +236,7 @@ namespace SolidDiffusion
     const std::string filename = "solution_timestep_" +
                                  Utilities::int_to_string(timestep_number, 3) +
                                  ".vtu";
-                                 // ".gnuplot";
+    // ".gnuplot";
     std::ofstream output(filename);
     data_out.write_vtu(output);
     // data_out.write_gnuplot(output);

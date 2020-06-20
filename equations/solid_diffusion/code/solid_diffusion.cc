@@ -1,6 +1,5 @@
 /* ---------------------------------------------------------------------
  * Copyright (C) 2020 by Krishnakumar Gopalakrishnan
- * This file is part of the deal.II library.
  * Authors: Krishnakumar Gopalakrishnan, University College London, 2020
  */
 
@@ -49,17 +48,23 @@ namespace SSBatteryScaledDiffusionEqn
   private:
     void setup_system();
 
-    void assemble_system();
+    void assemble_system(); // Assembles all components of matrix i.e. those
+    // multiplying U(t)
 
-    // In the implementation of the below function, the get_source() function
-    // below needs to be evaluated only if the MMS_flag is true
+    // This gives the numerical value of the BC (at left boundary in 1D case)
+    double get_boundary_neumann_value(const double time) const;
+
+    // In the implementation code of the below function, the get_source()
+    // function below needs to be evaluated only if the MMS_flag is true
     double get_source(const double time, const Point<dim> &point) const;
 
 
-    // Evaluate RHS of weak form of spatially discretised PDE (M^-1 (-Dy-Ay+S))
+    // The 'evaluate_diffusion' function below evaluates RHS of weak form of
+    // spatially discretised PDE (M^-1  (-Dy-Ay+S + 𝛽(t) 𝜓(0)) ). Do not forget
+    // that this function's return value already accounts for M^-1.
 
     // In the implementation of the below function, the section/logic for S(t)
-    // from get_source() above need to be evaluated only if the MMS_flag is true
+    // from get_source() needs evaluation only if the MMS_flag is true
     Vector<double> evaluate_diffusion(const double          time,
                                       const Vector<double> &y) const;
 
@@ -104,14 +109,14 @@ namespace SSBatteryScaledDiffusionEqn
   template <int dim>
   SolidDiffusion<dim>::SolidDiffusion()
     : fe_degree(3)
-    , diffusion_coefficient(1. / 30.) // value of D
-    , absorption_cross_section(1.)    // value of \Sigma_a
+    , diffusion_coefficient(1. / 25.) // value of D
+    // , diffusion_coefficient(1. / 30.) // value of D
+    , absorption_cross_section(0.) // value of \Sigma_a
     , fe(fe_degree)
     , dof_handler(triangulation)
     , mms_flag(false)
-    // , mms_flag(true) // if true, will run the MMS method with preassumed
-    // analytical solution (& hence, preassumed analytical
-    // source term) in the equation
+    // , mms_flag(true) // if true, will run MMS method with the preassumed
+    // analytical soln (& hence, preassumed analytical source term) in the eqn
     , b(5.0)
   {}
 
@@ -121,11 +126,6 @@ namespace SSBatteryScaledDiffusionEqn
   {
     dof_handler.distribute_dofs(fe);
 
-    // for dirichelet BCs at boundary_id = 0 (i.e. the left boundary in 1D)
-    VectorTools::interpolate_boundary_values(dof_handler,
-                                             0,
-                                             Functions::ZeroFunction<dim>(),
-                                             constraint_matrix);
     constraint_matrix.close();
 
     DynamicSparsityPattern dsp(dof_handler.n_dofs());
@@ -139,7 +139,8 @@ namespace SSBatteryScaledDiffusionEqn
 
 
   template <int dim>
-  void SolidDiffusion<dim>::assemble_system()
+  void SolidDiffusion<dim>::assemble_system() // Assembles all matrix components
+  // i.e. those multiplying U(t)
   {
     system_matrix = 0.;
     mass_matrix   = 0.;
@@ -158,13 +159,6 @@ namespace SSBatteryScaledDiffusionEqn
     FullMatrix<double> cell_mass_matrix(dofs_per_cell, dofs_per_cell);
 
     std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
-    // if (mms_flag == false)
-    //   {
-    //     // solution = 0.0; // why? Maybe not reqd since <Vector> shall have 0
-    //     IC
-    //     // InitialCondition<dim> initial_condition;
-    //     InitialValues<dim> initial_condition;
-    //   }
 
     for (const auto &cell : dof_handler.active_cell_iterators())
       {
@@ -188,12 +182,6 @@ namespace SSBatteryScaledDiffusionEqn
                 cell_mass_matrix(i, j) += fe_values.shape_value(i, q_point) *
                                           fe_values.shape_value(j, q_point) *
                                           fe_values.JxW(q_point);
-
-                // if (mms_flag == false)
-                //   {
-                //     const auto x_q = fe_values.quadrature_point(q_point);
-                //     solution(i)    = initial_condition.value(x_q)
-                //   }
               }
 
         cell->get_dof_indices(local_dof_indices);
@@ -209,25 +197,35 @@ namespace SSBatteryScaledDiffusionEqn
     inverse_mass_matrix.initialize(mass_matrix);
   }
 
+  template <int dim>
+  double
+  SolidDiffusion<dim>::get_boundary_neumann_value(const double time) const
+  {
+    return 0.0; // for now, hard-coding zero neumannBC value (for MMS
+                // checking etc.)
+  }
 
-  // This template function shall be called only if the MMS_flag is active
+  // This template function shall be called (from within evaluate_diffusion()),
+  // but only if the MMS_flag is active
   template <int dim>
   double SolidDiffusion<dim>::get_source(const double      time,
                                          const Point<dim> &point) const
   {
     const double intensity = 10.;               // A (amplitude)
     const double frequency = numbers::PI / 10.; // omega
-    const double b = 5.; // length in each co-ordinate direction (repeated in
-    // GridGenerator::hyper_cube method)
+    const double b         = 5.; // length in each co-ordinate direction (repeat
+    // declaration in GridGenerator::hyper_cube method)
     const double x = point(0); // assign the x-coord of point to 'x'
 
-    // A*((b^2 −2bx + x^2)􏰁ω x cos(ωt) +􏰀((b^2 −2bx + x^2)Σa x +
-    // 2D(2b−3x))􏰁sin(ωt))
-    return intensity *
-           ((b * b - 2. * b * x + x * x) * frequency * x *
-              std::cos(frequency * time) +
-            ((b * b - 2. * b * x + x * x) * absorption_cross_section * x +
-             2. * diffusion_coefficient * (2. * b - 3. * x)) *
+    // chosen analytical solution:u(x,t) is :
+    // A * sin (omega*t) * exp(-((x-0.5*b).^2)/(0.125*b))
+
+    // So the S(x,t) will be the following:
+    return intensity * exp(-2.0 * pow(b - 2.0 * x, 2) / b) *
+           (frequency * std::cos(frequency * time) +
+            (absorption_cross_section -
+             (16.0 * diffusion_coefficient *
+              (((4.0 * pow(b - 2.0 * x, 2)) / b) - 1.0) / b)) *
               std::sin(frequency * time));
   }
 
@@ -243,8 +241,14 @@ namespace SSBatteryScaledDiffusionEqn
     virtual double value(const Point<dim> & p,
                          const unsigned int component = 0) const override
     {
-      const double b = 5.0;
-      return (4.0 * p(0) / b) * (1.0 - (p(0) / b));
+      const double x         = p(0);
+      const double b         = 5.0;
+      const double amplitude = 1.0;
+
+      // manually chosen initial condition spatial function
+      return amplitude * exp(-(8.0 * pow(x - 0.5 * b, 2) /
+                               b)); // Gaussian centred at half the domain
+      // return amplitude * exp(-(2.0 * pow(x - 0.3 * b, 2) / b));
     }
   };
 
@@ -258,32 +262,69 @@ namespace SSBatteryScaledDiffusionEqn
   {
     Vector<double> tmp(dof_handler.n_dofs());
     tmp = 0.;
-    system_matrix.vmult(tmp, y);
+    system_matrix.vmult(tmp, y); // tmp now has (-mathcal{D} - \mathcal{A}) * y
 
-    // Needs evaluation only if MMS_flag is active (non-zero pre-computed S(t))
-    if (mms_flag)
+    const QGauss<dim> quadrature_formula(fe_degree + 1);
+
+    FEValues<dim> fe_values(fe,
+                            quadrature_formula,
+                            update_values | update_quadrature_points |
+                              update_JxW_values);
+
+    const unsigned int n_q_points = quadrature_formula.size();
+
+    const QGauss<dim - 1> face_quadrature_formula(fe.degree + 1);
+
+    FEFaceValues<dim> fe_face_values(fe,
+                                     face_quadrature_formula,
+                                     update_values | update_JxW_values);
+
+    const unsigned int n_face_q_points = face_quadrature_formula.size();
+
+    const unsigned int dofs_per_cell = fe.dofs_per_cell;
+
+    Vector<double> cell_neumannbc_contribution(dofs_per_cell);
+    std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
+
+    for (const auto &cell : dof_handler.active_cell_iterators())
       {
-        const QGauss<dim> quadrature_formula(fe_degree + 1);
+        cell_neumannbc_contribution = 0.;
+        for (unsigned int face_number = 0;
+             face_number < GeometryInfo<dim>::faces_per_cell;
+             ++face_number)
+          if (cell->face(face_number)->at_boundary() &&
+              (cell->face(face_number)->boundary_id() == 0))
+            // In 1D, boundary_id of left edge is 0 and right edge is 1
+            {
+              fe_face_values.reinit(cell, face_number);
+              for (unsigned int q_point = 0; q_point < n_face_q_points;
+                   ++q_point)
+                {
+                  const double left_boundary_neumann_value =
+                    get_boundary_neumann_value(time);
+                  for (unsigned int i = 0; i < dofs_per_cell; ++i)
+                    cell_neumannbc_contribution(i) +=
+                      (left_boundary_neumann_value *            // \beta(t)
+                       fe_face_values.shape_value(i, q_point) * // phi_i(x_q)
+                       fe_face_values.JxW(q_point));            // dx
+                }
+            }
 
-        FEValues<dim> fe_values(fe,
-                                quadrature_formula,
-                                update_values | update_quadrature_points |
-                                  update_JxW_values);
+        cell->get_dof_indices(local_dof_indices);
 
+        // tmp+=NeumannBC; i.e. (-D - A)y + NeumannBC
+        constraint_matrix.distribute_local_to_global(
+          cell_neumannbc_contribution, local_dof_indices, tmp);
+        // This probably just closes the constaint matrix thereby
+        // rendering everything else below out of scope?
 
-        const unsigned int dofs_per_cell = fe.dofs_per_cell;
-        const unsigned int n_q_points    = quadrature_formula.size();
-
-        Vector<double> cell_source(dofs_per_cell);
-
-        std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
-
-        for (const auto &cell : dof_handler.active_cell_iterators())
+        // Evaluate only if MMS_flag is active (non-zero pre-computed S(t))
+        if (mms_flag == true)
           {
+            Vector<double> cell_source(dofs_per_cell);
+
             cell_source = 0.;
-
             fe_values.reinit(cell);
-
             for (unsigned int q_point = 0; q_point < n_q_points; ++q_point)
               {
                 const double source =
@@ -295,24 +336,19 @@ namespace SSBatteryScaledDiffusionEqn
                     fe_values.JxW(q_point);             // * dx
               }
 
-            cell->get_dof_indices(local_dof_indices);
-
-            // tmp+=S(t); i.e. (-D - A)y + S(t)
+            // tmp+=S(t); i.e. (-D - A)y + NeumannBC + S(t)
             constraint_matrix.distribute_local_to_global(cell_source,
                                                          local_dof_indices,
                                                          tmp);
           }
       }
-    // else
-    //   {
-    //     /* ExcNotImplemented( "Non-MMS run: The diffusion equation without
-    //      * source term has not yet been implemented"); */
-    //   }
+
 
     Vector<double> value(dof_handler.n_dofs());
     inverse_mass_matrix.vmult(value, tmp);
 
-    return value; // value contains -M^-1 * (-Dy - Ay + S)
+    return value; // value contains -M^-1 * (-Dy - Ay + NeumannBC + optionally,
+                  // S)
   }
 
 
@@ -386,18 +422,9 @@ namespace SSBatteryScaledDiffusionEqn
     const double refine_tol    = 1e-1;
     const double coarsen_tol   = 1e-5;
 
-    // solution = 0.; // This is suspect for a non-MMS simulation
-    // If MMS_flag is active, use the carefully chosen S(t)
-    /* Assert(mms_flag, ExcNotImplemented("Non-MMS flag: Not implemented"));
-     */
     if (mms_flag)
-      {
-        solution = 0.;
-      }
-    /* else */
-    /* { */
-    /* ExcNotImplemented("Non-MMS flag: Not implemented"); */
-    /* } */
+      solution = 0.;
+
     constraint_matrix.distribute(solution);
 
     TimeStepping::EmbeddedExplicitRungeKutta<Vector<double>>
@@ -441,7 +468,7 @@ namespace SSBatteryScaledDiffusionEqn
   void SolidDiffusion<dim>::run()
   {
     GridGenerator::hyper_cube(triangulation, 0., b); // b = 5 for now
-    triangulation.refine_global(4);
+    triangulation.refine_global(6);
 
     setup_system();
     if (mms_flag == false)
@@ -454,19 +481,20 @@ namespace SSBatteryScaledDiffusionEqn
                              solution);
       }
 
-    assemble_system();
+    assemble_system(); // Assembles matrix components (those multiplying U(t))
 
     unsigned int       n_steps      = 0;
     const unsigned int n_time_steps = 200;
     const double       initial_time = 0.;
     const double       final_time   = 10.;
-    // For the final_time above, note that the (frequency) omega = pi/10;
-    // sin(omega*t_final) = sin(pi) = 0
+    // In the MMS version of the code, for the final_time above, note that the
+    // (frequency) omega = pi/10; sin(omega*t_final) = sin(pi) = 0
 
     n_steps = embedded_explicit_method(TimeStepping::DOPRI,
                                        n_time_steps,
                                        initial_time,
                                        final_time);
+
     // In this context, the error is valid only if the MMS_flag is active
     if (mms_flag)
       {
