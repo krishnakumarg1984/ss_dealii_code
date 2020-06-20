@@ -14,6 +14,15 @@
 % \usepackage{xparse}
 % \input{custom_cmds_for_equation_grid.tex}
 % \usepackage{cleveref}
+% https://tex.stackexchange.com/questions/212067/subscripts-with-capital-letter-adjusting-or-etiquette
+\newcommand{\cLi}{\ensuremath{c_{\mathchoice{}{}{\scriptscriptstyle}{} \mathrm{L}\mathrm{i}}}}
+\newcommand{\cLimax}{\ensuremath{c_{\mathchoice{}{}{\scriptscriptstyle}{} \mathrm{L}\mathrm{i}_\text{max}}}}
+\newcommand{\DLi}{\ensuremath{D_{\mathchoice{}{}{\scriptscriptstyle}{} \mathrm{L}\mathrm{i}}}}
+\newcommand{\DLichar}{\ensuremath{D_{\mathchoice{}{}{\scriptscriptstyle}{} \mathrm{L}\mathrm{i}_\text{c}}}}
+\newcommand{\cbarLi}{\ensuremath{\bar{c}_{\mathchoice{}{}{\scriptscriptstyle}{} \mathrm{L}\mathrm{i}}}}
+\newcommand{\DbarLi}{\ensuremath{\overline{D}_{\mathchoice{}{}{\scriptscriptstyle}{} \mathrm{L}\mathrm{i}}}}
+\newcommand{\xbar}{\ensuremath{\bar{x}}}
+\newcommand{\tbar}{\ensuremath{\bar{t}}}
 
 \begin{document}
 
@@ -40,7 +49,7 @@ At negative current collector interface,
     \frac{\si{\ampere}}{\si{\meter\cubed}} &= \frac{\si{\ampere}}{\si{\meter\cubed}}, &\quad \text{See}~\eqref{eq:phielnegcc_dimcheck}; &&\ \frac{\si{\ampere}}{\si{\meter\squared}} &= \frac{\si{\ampere}}{\si{\meter\squared}} \\
 \end{alignat}
 
-Sign convention: Discharge current,\(i\) is negative. \todo[inline]{Mon  6 Apr 2020 00:14:56 BST, MC to check this one} Therefore, the electrolyte potential at negative current collector is also negative for discharge.
+Sign convention: Discharge current,\,\(i\) is negative. \todo[inline]{Mon  6 Apr 2020 00:14:56 BST, MC to check this one} Therefore, the electrolyte potential at negative current collector is also negative for discharge.
 
 
 It is clear that \(i = i_\text{pulse}\, (\si{\ampere\per\meter\squared})\). There is no need for the bold symbol.
@@ -50,7 +59,27 @@ It is clear that \(i = i_\text{pulse}\, (\si{\ampere\per\meter\squared})\). Ther
 
 \bigskip
 
-Solid Diffusion PDE (to do)
+Solid Diffusion PDE to solve for \cLi$(x,t)$.
 
+\begin{alignat}{4}
+    \diffp{\cLi}{t} &= \diffp*{\left(\DLi(\theta)\diffp{\cLi}{x}\right)}{x},  &\qquad \DLi(\theta)\diffp{\cLi}{x}{\mathrlap{x=0}}&= -\frac{i}{F}\  ; \qquad\qquad &&\  \DLi(\theta)\diffp{\cLi}{x}{\mathrlap{x=L_\text{pos}}} \ &= \ 0 \label{eq:soliddiffpdeandbcs}\\
+    \frac{\si{\mol\per\metre\cubed}}{\si{\second}} &= \frac{1}{\si{\metre}} \left(\frac{\si{\meter\squared}}{\si{\second}}\cdot \frac{\si{\mol\per\metre\cubed}}{\si{\metre}}\right), &\qquad   \frac{\si{\meter\squared}}{\si{\second}}\cdot \frac{\si{\mol\per\metre\cubed}}{\si{\metre}} &= \frac{\si{\ampere\per\metre\squared}}{\si{\coulomb\per\mol}}\ ; &&\ \text{same as the left BC} \\
+    \frac{\si{\mol\per\metre\cubed}}{\si{\second}} &= \frac{\si{\mol\per\metre\cubed}}{\si{\second}} &\qquad    \frac{\si{\mol\per\metre\squared}}{\si{\second}} &= \frac{\si{\coulomb\per\metre\squared}}{\si{\coulomb\second\per\mol}}\ ; &&\ \text{same as the left BC} \\
+    \frac{\si{\mol\per\metre\cubed}}{\si{\second}} &= \frac{\si{\mol\per\metre\cubed}}{\si{\second}} &\qquad    \frac{\si{\mol\per\metre\squared}}{\si{\second}} &= \frac{\si{\mol\per\metre\squared}}{\si{\second}}\ ; &&\ \text{same as the left BC}
+\end{alignat}
+
+\section*{Non-dimensional equations}
+Solid Diffusion PDE to solve for \cbarLi$(\xbar,\tbar\,)$.
+\begin{align}
+    \xbar &= \frac{x}{L_\text{pos}}\\
+    \tbar &= \frac{t}{t_c}; \quad t_c = \frac{L^2_\text{pos}}{\DLichar}; \quad \DLichar = \frac{L_\text{pos} \,i_\text{c}}{\cLimax \, F}\\
+    \cbarLi &= \frac{\cLi}{\cLimax} \\
+    \DbarLi(\theta) &= \frac{\DLi(\theta)}{\DLichar}
+\end{align}
+
+Therefore, the non-dimensional equivalent of \eqref{eq:soliddiffpdeandbcs} is
+\begin{alignat}{4}
+    \diffp{\cbarLi}{\tbar} &= \diffp*{\left(\DbarLi(\theta)\diffp{\cbarLi}{\xbar}\right)}{\xbar},  &\qquad\qquad \DbarLi(\theta)\diffp{\cbarLi}{\xbar}{\mathrlap{\xbar=0}}\ &= -\bar{i}\  ; \quad &&\  \DbarLi(\theta)\diffp{\cbarLi}{\xbar}{\mathrlap{\xbar=1}}\ &= 0\
+\end{alignat}
 
 \end{document}
